@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.venv/
+.cache/
+spike/out/
+__pycache__/
+node_modules/
+.claude/
+.firebase/
+docs/

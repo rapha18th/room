@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Room</title>
+  <meta name="description" content="Read the room before you walk in. Room checks every cultural reference in your script against the audience you are about to face, using Qloo's taste graph.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="spot" aria-hidden="true"></div>
+
+  <header class="top">
+    <div class="brand">
+      <h1 class="mark">Room</h1>
+      <p class="tag">Read the room before you walk in.</p>
+    </div>
+    <button class="ghost" id="howBtn" type="button">How it reads</button>
+  </header>
+
+  <section class="audience" aria-label="The audience">
+    <div class="group">
+      <span class="label">The room</span>
+      <div class="chips" id="chips"></div>
+      <form id="addCity" class="add" autocomplete="off">
+        <input id="cityInput" list="cityList" placeholder="Add a city" aria-label="Add a city" maxlength="60">
+        <datalist id="cityList"></datalist>
+      </form>
+    </div>
+    <div class="group">
+      <span class="label">Age</span>
+      <div class="seg" id="ages" role="radiogroup" aria-label="Audience age"></div>
+    </div>
+  </section>
+
+  <main class="stage">
+    <article class="paper" id="paper">
+      <div class="paper-head">
+        <span class="slug" id="slug">INT. YOUR SET</span>
+        <div class="samples" id="samples"></div>
+      </div>
+      <textarea id="script" spellcheck="false" aria-label="Your script" placeholder="Paste a set, a script, a speech or an ad. Room finds every reference and tells you where it lands."></textarea>
+      <div id="read" class="read" hidden></div>
+      <div class="paper-foot">
+        <span class="status" id="status" aria-live="polite"></span>
+        <div class="actions">
+          <button class="ghost dark" id="editBtn" type="button" hidden>Edit</button>
+          <button class="primary" id="readBtn" type="button">Read the room</button>
+        </div>
+      </div>
+    </article>
+
+    <aside class="panel" id="panel" aria-live="polite">
+      <div id="board"></div>
+      <div id="detail" hidden></div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Scores come from Qloo's taste graph. <b>Known</b> compares local fan signal with a household name. <b>Loved</b> is the median affinity across the city.</span>
+    <a href="https://github.com/rapha18th/room" target="_blank" rel="noopener">Source</a>
+  </footer>
+
+  <dialog id="how">
+    <h2>How Room reads a script</h2>
+    <ol>
+      <li><b>Read.</b> Gemini finds every reference and names the job it does in the line.</li>
+      <li><b>Match.</b> Qloo search turns each one into an entity in its taste graph.</li>
+      <li><b>Map.</b> One Qloo heatmap covers your cities and five anchor cities, so every city shares one scale.</li>
+      <li><b>Score.</b> Known is the reference's signal in a city against a household name of the same kind. Loved is its median affinity there.</li>
+      <li><b>Swap.</b> For a weak city, Qloo offers what that audience loves, Gemini keeps the ones that do the same job, and Room scores each one again.</li>
+    </ol>
+    <dl class="legend" id="legend"></dl>
+    <form method="dialog"><button class="primary">Got it</button></form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+"""Gemini on Vertex: read a script for references, and pick swaps that keep a reference's job."""
+
+import asyncio
+import os
+
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
+
+# Reading needs judgement (skip setting-only cities, name each reference's job): 3.7 Flash.
+# Picking swaps from a short list is lighter and has to be quick: 3.6 Flash.
+MODEL = os.environ.get("ROOM_MODEL", "gemini-3.7-flash")
+SWAP_MODEL = os.environ.get("ROOM_SWAP_MODEL", "gemini-3.6-flash")
+_client = None
+
+
+def client() -> genai.Client:
+    global _client
+    if _client is None:
+        _client = genai.Client()
+    return _client
+
+
+def _call(prompt: str, schema, temperature: float, model: str, ms: int):
+    r = client().models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=temperature,
+            response_mime_type="application/json",
+            response_schema=schema,
+            http_options=types.HttpOptions(timeout=ms),
+        ),
+    )
+    return r.parsed
+
+
+async def generate(prompt: str, schema, temperature: float, model: str = MODEL, head_start: float = 15.0):
+    """A structured call that answers inside Hosting's 60 s window.
+
+    The chosen model gets a head start. If it is still thinking after head_start seconds,
+    the other Flash model joins and the first good answer wins.
+    """
+    other = SWAP_MODEL if model == MODEL else MODEL
+    first = asyncio.create_task(asyncio.to_thread(_call, prompt, schema, temperature, model, 40_000))
+    done, _ = await asyncio.wait({first}, timeout=head_start)
+    if first in done and not first.exception():
+        return first.result()
+    if first in done:
+        print(f"llm: {model} failed ({str(first.exception())[:120]})")
+    else:
+        print(f"llm: {model} slow, racing {other}")
+    second = asyncio.create_task(asyncio.to_thread(_call, prompt, schema, temperature, other, 35_000))
+    pending = {second} if first in done else {first, second}
+    last = first.exception() if first in done else None
+    while pending:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        for t in done:
+            if not t.exception():
+                for rest in pending:
+                    rest.cancel()
+                return t.result()
+            last = t.exception()
+            print(f"llm: a racer failed ({str(last)[:120]})")
+    raise last
+
+
+class Ref(BaseModel):
+    surface: str = Field(description="The reference exactly as written in the text, character for character")
+    name: str = Field(description="Canonical name to search for, e.g. 'In-N-Out Burger' for 'In-N-Out'")
+    type: str = Field(description="artist, book, brand, destination, movie, person, place, podcast, tv_show, videogame, or other")
+    role: str = Field(description="3 to 8 words on the job the reference does in its line, e.g. 'cheap 3am chaos', 'symbol of giving up'")
+
+
+class Refs(BaseModel):
+    references: list[Ref]
+
+
+EXTRACT = """You read scripts for a comedian, writer or marketer before they face an audience.
+List every cultural reference in the text: brands, chains, musicians, bands, celebrities, public figures,
+films, TV shows, books, podcasts, video games, named venues and restaurants, and travel destinations.
+Also list foods, sports teams, slang, memes and events, with type "other".
+Skip the cities themselves when they only say where something happens.
+Each distinct reference once, in order of first appearance. Copy "surface" exactly from the text.
+
+TEXT:
+"""
+
+
+async def extract(text: str) -> list[dict]:
+    parsed = await generate(EXTRACT + text, Refs, 0.1)
+    refs = parsed.references if parsed else []
+    out, used = [], set()
+    for ref in refs:
+        start = _find(text, ref.surface, used)
+        if start < 0:
+            continue
+        used.add(start)
+        end = start + len(ref.surface)
+        out.append({"surface": text[start:end], "start": start, "end": end, "name": ref.name,
+                    "type": ref.type.strip().lower().replace(" ", "_"), "role": ref.role,
+                    "sentence": _sentence(text, start, end)})
+    return sorted(out, key=lambda r: r["start"])
+
+
+def _find(text: str, surface: str, used: set) -> int:
+    i = text.find(surface)
+    while i >= 0 and i in used:
+        i = text.find(surface, i + 1)
+    if i < 0:
+        i = text.lower().find(surface.lower())
+    return i
+
+
+def _sentence(text: str, start: int, end: int) -> str:
+    a = max(text.rfind(ch, 0, start) for ch in ".!?\n")
+    bs = [text.find(ch, end) for ch in ".!?\n"]
+    b = min([x for x in bs if x >= 0] or [len(text)])
+    return text[a + 1:b + 1].strip()
+
+
+class Pick(BaseModel):
+    entity_id: str
+    line: str = Field(description="The original sentence rewritten with this swap, keeping the rhythm and the joke")
+    why: str = Field(description="One short sentence on why it does the same job for this audience")
+
+
+class Picks(BaseModel):
+    picks: list[Pick]
+
+
+SWAP = """A writer is taking this line to an audience in {city}.
+
+LINE: {sentence}
+REFERENCE: {surface}
+ITS JOB IN THE LINE: {role}
+
+The reference is weak with this audience. Qloo returned these candidates that the {city} audience
+has real affinity for. Pick up to three that do the same job in the line, best first. Pick only from
+the list, by entity_id. Rewrite the line with each pick, changing as little as possible.
+
+CANDIDATES:
+{candidates}
+"""
+
+
+async def pick_swaps(sentence: str, surface: str, role: str, city: str, candidates: list[dict]) -> list[dict]:
+    listing = "\n".join(
+        f"- {c['entity_id']} | {c['name']} | {c.get('description') or ''} | tags: "
+        + ", ".join(t["name"] for t in (c.get("tags") or [])[:5] if t.get("name"))
+        for c in candidates
+    )
+
+    parsed = await generate(SWAP.format(city=city, sentence=sentence, surface=surface, role=role,
+                                        candidates=listing), Picks, 0.4, SWAP_MODEL, head_start=12.0)
+    picks = parsed.picks if parsed else []
+    valid = {c["entity_id"]: c for c in candidates}
+    return [{"candidate": valid[p.entity_id], "line": p.line, "why": p.why}
+            for p in picks if p.entity_id in valid][:3]

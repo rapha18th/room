@@ -1,0 +1,11 @@
+.env
+.env.*
+.venv/
+.cache/
+.claude/
+.firebase/
+.git/
+docs/
+spike/
+web/
+__pycache__/
