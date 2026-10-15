@@ -81,6 +81,7 @@ const state = {
   math: false,
   gen: 0,
   lens: "qloo",
+  traceOpen: false,   // the agent trace stays open across re-renders once opened
   guess: null,
   review: null,        // { city, running, items, trace, before, current }
   doc: null,           // { file, name, kind, blocks }
@@ -195,6 +196,7 @@ function renderControls() { keepFocus(renderControlsNow); }
 function renderControlsNow() {
   document.querySelectorAll("#modes [data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.tab)));
   $("roomGroup").hidden = state.tab !== "room";
+  document.querySelector(".stage").classList.toggle("touring", state.tab === "tour");
   $("tourGroup").hidden = state.tab !== "tour";
   $("chips").innerHTML = state.cities.map((c) => `
     <span class="chip ${c === state.focus ? "focus" : ""}">
@@ -662,7 +664,7 @@ function reviewHtml() {
       const ref = state.refs.find((r) => r.id === it.ref_id);
       return `<li><b>${esc(ref?.surface || "")}</b>: ${esc(it.why || "")}</li>`;
     }).join("")}</ul></details>` : ""}
-    <details class="work"><summary>How the agent decided (${rv.trace.length} steps)</summary>
+    <details class="work"${state.traceOpen ? " open" : ""}><summary>How the agent decided (${rv.trace.length} steps)</summary>
       <ol class="trace">${rv.trace.map((e) => `<li class="t-${e.who}"><span class="who">${WHO[e.who] || e.who}</span><span class="what">${esc(e.text)}</span>${e.ms >= 100 ? `<span class="ms">${(e.ms / 1000).toFixed(1)} s</span>` : "<span></span>"}</li>`).join("")}</ol>
     </details>
     <div class="sticky">
@@ -1212,6 +1214,7 @@ function loadSample(i) {
   readRoom();
 }
 $("samples").innerHTML = SAMPLES.map((s, i) => `<button type="button" data-sample="${i}">${s.name}</button>`).join("");
+$("panel").addEventListener("toggle", (e) => { if (e.target.matches?.("details.work")) state.traceOpen = e.target.open; }, true);
 $("samples").addEventListener("click", (e) => { const b = e.target.closest("[data-sample]"); if (b) loadSample(+b.dataset.sample); });
 
 // ---------- commands and keys ----------

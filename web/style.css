@@ -105,6 +105,8 @@ kbd { font: 11px var(--keys); border: 1px solid var(--line); border-bottom-width
 
 /* ---------- stage ---------- */
 .stage { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; margin-top: 28px; align-items: start; }
+/* A tour sheet needs a column per stop: the panel takes the wider share. */
+.stage.touring { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.35fr); }
 .paper {
   background: var(--paper); color: var(--ink); border-radius: var(--r); --focus: var(--ink);
   box-shadow: 0 30px 80px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.04);
@@ -276,10 +278,10 @@ details.work { margin-top: 18px; }
 details.work summary { cursor: pointer; font-size: 12.5px; color: var(--muted); }
 
 /* ---------- tour ---------- */
-.sheet-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+.sheet-wrap { overflow-x: auto; margin: 0 -4px; padding: 0 4px; scrollbar-color: var(--line) transparent; scrollbar-width: thin; }
 .sheet { border-collapse: collapse; min-width: 100%; }
 .sheet th, .sheet td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 12.5px; }
-.sheet th:first-child, .sheet td:first-child { position: sticky; left: 0; background: var(--stage-2); min-width: 130px; padding-left: 0; }
+.sheet th:first-child, .sheet td:first-child { position: sticky; left: 0; background: var(--stage-2); min-width: 112px; padding-left: 0; }
 .stophead { background: none; border: 1px solid transparent; border-radius: 10px; padding: 6px 8px; text-align: left; min-width: 104px; }
 .stophead:hover { border-color: var(--line); }
 .stophead.on { border-color: var(--lands); }
@@ -339,7 +341,7 @@ dialog li { margin-bottom: 8px; }
 
 /* ---------- small screens ---------- */
 @media (max-width: 960px) {
-  .stage { grid-template-columns: 1fr; }
+  .stage, .stage.touring { grid-template-columns: 1fr; }
   .paper, .panel { min-height: 0; }
   #script, .read { min-height: 300px; }
   .read { max-height: none; }
