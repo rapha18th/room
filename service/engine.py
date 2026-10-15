@@ -240,7 +240,7 @@ VERDICTS = {
     "lands": "They know it and they love it.",
     "roast": "They know it and keep their distance. Good for a jab.",
     "inside": "A slice of the room knows it. The ones who do, love it.",
-    "dies": "Most of the room has never heard of it.",
+    "dies": "A blank for most of the room.",
     "global": "Known worldwide. Qloo holds no local map for it.",
     "famous": "Famous everywhere, with a thin fan base here. Expect recognition and little love.",
     "unscored": "Qloo holds too little on this one to call it.",
