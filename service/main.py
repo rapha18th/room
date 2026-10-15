@@ -9,12 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException, Request  # noqa: E402
-from fastapi.responses import JSONResponse  # noqa: E402
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile  # noqa: E402
+from fastapi.responses import JSONResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
 import agent  # noqa: E402
+import docs  # noqa: E402
 import engine  # noqa: E402
 from cache import cache, Cache  # noqa: E402
 import llm  # noqa: E402
@@ -238,6 +239,38 @@ class AgentCutIn(BaseModel):
 async def agent_cut(body: AgentCutIn, request: Request):
     limit(request, 60)
     return await agent.cut(body.text, body.refs, body.ref_id, body.city, body.apply)
+
+
+# ---------- documents: PDF, PPTX, DOCX, TXT, MD in; the corrected file out ----------
+
+async def _read_upload(file: UploadFile) -> bytes:
+    data = await file.read(docs.MAX_BYTES + 1)
+    if len(data) > docs.MAX_BYTES:
+        raise HTTPException(413, "Room reads files up to 12 MB.")
+    return data
+
+
+@app.post("/api/doc/parse")
+async def doc_parse(request: Request, file: UploadFile = File(...)):
+    """Text blocks with stable ids. The browser joins them with blank lines and reads them like a script."""
+    limit(request, 20)
+    return await asyncio.to_thread(docs.parse, file.filename or "upload.txt", await _read_upload(file))
+
+
+@app.post("/api/doc/export")
+async def doc_export(request: Request, file: UploadFile = File(...), changes: str = Form("[]")):
+    """The original file with the changed blocks rewritten. A PDF comes back as DOCX."""
+    import json
+    from urllib.parse import quote
+
+    limit(request, 20)
+    try:
+        edits = [c for c in json.loads(changes) if isinstance(c, dict)]
+    except ValueError:
+        raise HTTPException(400, "changes must be a JSON list of {id, text}")
+    name, out, media = await asyncio.to_thread(docs.export, file.filename or "upload.txt", await _read_upload(file), edits)
+    return Response(out, media_type=media,
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
 
 
 @app.get("/api/search")
