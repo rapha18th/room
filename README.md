@@ -60,7 +60,7 @@ The room score counts up as you accept. The agent's full trace, every Qloo call 
 
 ## Tour mode
 
-Give Room up to eight stops. It scores the set in every city, runs a review per stop, and fills a tour sheet: one column per city, one row per reference, each cell saying what stays, what swaps and what gets cut, with the room score before and after. Tap a stop and the paper shows that city's version; **Print set lists** gives one page per stop with every change marked. On the launch ad routed through Atlanta, Dallas, London, Lagos and Nairobi, London swaps Chick-fil-A for Dishoom (76% to 88%) and Nairobi for Cold Stone Creamery (80% to 92%).
+Give Room up to eight stops. It scores the set in every city, runs a review per stop, and fills a tour sheet: one column per city, one row per reference, each cell saying what stays, what swaps and what gets cut, with the room score before and after. Tap a stop and the paper shows that city's version; **Print set lists** gives one page per stop with every change marked. In one run of the launch ad, with Chick-fil-A accepted for Atlanta and the tour routed through Atlanta, Dallas, London, Lagos and Nairobi, London took its Nando's back (76% to 88%) and Lagos took KFC (80% to 92%). The same line, three cities, three local answers.
 
 ## Files: decks and documents in, corrected files out
 
@@ -136,7 +136,7 @@ Nando's, in the launch ad, for a room of Atlanta, Lagos and London. Every call i
 python -m venv .venv
 .venv/Scripts/pip install -r service/requirements.txt   # macOS/Linux: .venv/bin/pip
 cp .env.example .env                                     # add QLOO_API_KEY
-gcloud auth application-default login                    # Gemini on Vertex AI
+gcloud auth application-default login                    # Gemini on Vertex AI (enable the Vertex AI API)
 GOOGLE_CLOUD_PROJECT=<your-project> .venv/Scripts/python service/dev.py
 ```
 
