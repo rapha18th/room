@@ -11,27 +11,26 @@
   "Nairobi",
   "Mumbai"
  ],
- "resolved": 54,
+ "resolved": 55,
  "coverage_gaps": [
   "Big Brother Naija",
   "Chicken Republic",
   "Nviiri the Storyteller",
   "Tusker",
-  "Nyashinski",
   "Parle-G"
  ],
  "table": {
   "all": {
-   "n": 54,
-   "qloo_cells": 0.889,
-   "qloo_taste": 0.889,
+   "n": 55,
+   "qloo_cells": 0.873,
+   "qloo_taste": 0.873,
    "llm": 1.0,
    "room": 1.0
   },
   "clean": {
-   "n": 38,
-   "qloo_cells": 0.842,
-   "qloo_taste": 0.842,
+   "n": 39,
+   "qloo_cells": 0.821,
+   "qloo_taste": 0.821,
    "llm": 1.0,
    "room": 1.0
   },
@@ -43,16 +42,16 @@
    "room": 1.0
   },
   "africa_india": {
-   "n": 18,
-   "qloo_cells": 0.778,
-   "qloo_taste": 0.722,
+   "n": 19,
+   "qloo_cells": 0.737,
+   "qloo_taste": 0.684,
    "llm": 1.0,
    "room": 1.0
   },
   "clean_artists": {
-   "n": 17,
-   "qloo_cells": 0.706,
-   "qloo_taste": 0.706,
+   "n": 18,
+   "qloo_cells": 0.667,
+   "qloo_taste": 0.667,
    "llm": 1.0,
    "room": 1.0
   },
@@ -742,6 +741,19 @@
    }
   },
   {
+   "name": "Nyashinski",
+   "type": "artist",
+   "home": "Nairobi",
+   "giveaway": false,
+   "mode": "memory",
+   "tops": {
+    "qloo_cells": null,
+    "qloo_taste": null,
+    "llm": "Nairobi",
+    "room": "Nairobi"
+   }
+  },
+  {
    "name": "Bien",
    "type": "artist",
    "home": "Nairobi",
@@ -768,5 +780,5 @@
    }
   }
  ],
- "seconds": 133
+ "seconds": 104
 }

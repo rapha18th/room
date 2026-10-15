@@ -33,15 +33,15 @@ Gemini chooses among Qloo's candidates, so a swap or a score can shift a point o
 
 Qloo publishes affinity, a measure of how strongly an entity relates to an audience or a place, and advises comparing scores by rank. Its published numbers are client outcomes, so Room built a benchmark for the job it hands out: which city knows a name best.
 
-[`benchmark/`](benchmark) holds 60 references with one home city among ten (New York, Los Angeles, Dallas, Atlanta, Toronto, London, Johannesburg, Lagos, Nairobi, Mumbai): sports teams, regional chains, local TV and local artists. Six that Qloo matches only loosely count as coverage gaps. The clean subset drops names that carry their home city, state or country.
+[`benchmark/`](benchmark) holds 60 references with one home city among ten (New York, Los Angeles, Dallas, Atlanta, Toronto, London, Johannesburg, Lagos, Nairobi, Mumbai): sports teams, regional chains, local TV and local artists. Five that Qloo matches only loosely count as coverage gaps. The clean subset drops names that carry their home city, state or country.
 
 | Subset | n | Qloo fan presence | Qloo taste (median affinity) | Gemini alone | Room |
 |---|---|---|---|---|---|
-| All | 54 | 89% | 89% | 100% | **100%** |
-| Clean | 38 | 84% | 84% | 100% | **100%** |
-| Africa and India | 18 | 78% | 72% | 100% | **100%** |
+| All | 55 | 87% | 87% | 100% | **100%** |
+| Clean | 39 | 82% | 82% | 100% | **100%** |
+| Africa and India | 19 | 74% | 68% | 100% | **100%** |
 | Clean brands | 16 | 100% | 100% | 100% | **100%** |
-| Clean artists | 17 | 71% | 71% | 100% | **100%** |
+| Clean artists | 18 | 67% | 67% | 100% | **100%** |
 
 Qloo's map places every brand. Its misses are artists with thin records: several African artists share one cluster map that peaks in Lagos, and the signal per square kilometre in Lagos, Nairobi and Johannesburg runs at a quarter of New York's. So Room asks Gemini who recognises a name, lets Qloo raise that wherever a solid record shows a real fan base, and takes Loved, age, swaps, tours and every rewrite from Qloo's taste graph. Rerun with `python benchmark/run.py`; every row is in [`benchmark/results.md`](benchmark/results.md).
 

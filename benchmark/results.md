@@ -1,12 +1,12 @@
-Fame track: home city found. 54 references resolved with certainty out of 60; coverage gaps: Big Brother Naija, Chicken Republic, Nviiri the Storyteller, Tusker, Nyashinski, Parle-G.
+Fame track: home city found. 55 references resolved with certainty out of 60; coverage gaps: Big Brother Naija, Chicken Republic, Nviiri the Storyteller, Tusker, Parle-G.
 
 | Subset | n | Qloo fan presence alone | Qloo taste (median affinity) alone | Gemini alone, from memory | Room |
 |---|---|---|---|---|---|
-| all | 54 | 89% | 89% | 100% | 100% |
-| clean | 38 | 84% | 84% | 100% | 100% |
+| all | 55 | 87% | 87% | 100% | 100% |
+| clean | 39 | 82% | 82% | 100% | 100% |
 | us canada uk | 36 | 94% | 97% | 100% | 100% |
-| africa india | 18 | 78% | 72% | 100% | 100% |
-| clean artists | 17 | 71% | 71% | 100% | 100% |
+| africa india | 19 | 74% | 68% | 100% | 100% |
+| clean artists | 18 | 67% | 67% | 100% | 100% |
 | clean brands | 16 | 100% | 100% | 100% | 100% |
 
 | Reference | Home | Qloo fan presence alone | Qloo taste (median affinity) alone | Gemini alone, from memory | Room |
@@ -63,6 +63,7 @@ Fame track: home city found. 54 references resolved with certainty out of 60; co
 | Taarak Mehta Ka Ooltah Chashmah | Mumbai | **Mumbai** | **Mumbai** | **Mumbai** | **Mumbai** |
 | Badshah | Mumbai | **Mumbai** | **Mumbai** | **Mumbai** | **Mumbai** |
 | Pick n Pay | Johannesburg | **Johannesburg** | **Johannesburg** | **Johannesburg** | **Johannesburg** |
+| Nyashinski | Nairobi | no map | no map | **Nairobi** | **Nairobi** |
 | Bien | Nairobi | New York | Los Angeles | **Nairobi** | **Nairobi** |
 | Skeem Saam | Johannesburg | no map | no map | **Johannesburg** | **Johannesburg** |
 
