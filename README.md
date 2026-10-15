@@ -43,7 +43,7 @@ One button: **Rewrite for Atlanta**. The agent works in three tools and shows ev
 
 The agent stops when the city clears 90% or the plan runs out, and reports what the rewrite costs in every other city. Each step is its own short request, so the browser drives the loop and the trace streams as it happens.
 
-On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (62% to 82%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
+On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (80% to 92%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
 
 ## Second opinion
 
