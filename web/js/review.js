@@ -2,7 +2,6 @@
 // Gemini plans (swap, drop, keep); Qloo finds and tests swaps; Gemini cuts what goes.
 // Nothing here edits the script: every result is a proposal the writer accepts or ignores.
 
-const WEAK = new Set(["dies", "inside", "unscored"]);
 
 export function verdictIn(ref, city) {
   return ref.score?.cities?.[city]?.verdict ?? null;
@@ -21,6 +20,7 @@ export async function runReview(opts) {
     status: s.action === "keep" ? "kept" : "working", order: i }));
   items.forEach((it) => onItem(it));
   const exclude = refs.filter((r) => r.match).map((r) => r.match.entity_id);
+  const taken = new Set();   // a swap target serves one reference per review
 
   const work = items.filter((it) => it.action !== "keep");
   const next = async () => {
@@ -29,12 +29,16 @@ export async function runReview(opts) {
       const ref = refs.find((r) => r.id === it.ref_id);
       try {
         if (it.action === "swap") {
-          const f = await api("/agent/find", { ref, city, exclude });
+          const f = await api("/agent/find", { ref, city, exclude: [...exclude, ...taken] });
           trace(f.trace);
-          if (f.picks.length) {
-            const t = await api("/agent/test", { text, refs, ref_id: ref.id, picks: f.picks, city, cities, age, apply: false });
+          const picks = f.picks.filter((p) => !taken.has(p.candidate.entity_id));
+          if (picks.length) {
+            const t = await api("/agent/test", { text, refs, ref_id: ref.id, picks, city, cities, age, apply: false });
             trace(t.trace);
-            if (t.proposal) it.proposal = t.proposal;
+            if (t.proposal && !taken.has(t.proposal.candidate.entity_id)) {
+              it.proposal = t.proposal;
+              taken.add(t.proposal.candidate.entity_id);
+            }
           }
           if (!it.proposal && verdictIn(ref, city) === "dies") {
             const c = await api("/agent/cut", { text, refs, ref_id: ref.id, city, apply: false });
