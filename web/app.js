@@ -64,7 +64,11 @@ async function api(path, body) {
 }
 
 const roomKey = () => state.cities.join("|") + "#" + state.age;
-const scoreOf = (ref) => { const s = state.scores[ref.id]; return s && s.key === roomKey() ? s.data : null; };
+const scoreOf = (ref) => {
+  if (ref.score) return ref.score;            // references inside an agent draft carry their own score
+  const s = state.scores[ref.id];
+  return s && s.key === roomKey() ? s.data : null;
+};
 const scorable = (ref) => ref.match && !ref.outside;
 
 function verdictFor(ref, city) {
@@ -95,6 +99,7 @@ function renderAges() {
 }
 
 function setCities(cities) {
+  state.agent = null;
   state.cities = cities;
   if (!cities.includes(state.focus)) state.focus = cities[0];
   store.set("cities", cities);
@@ -209,27 +214,35 @@ function render() {
   $("editBtn").hidden = !reading;
   $("readBtn").textContent = reading ? "Read again" : "Read the room";
   $("slug").textContent = state.slug;
-  if (reading) renderPaper();
+  const a = state.agent;
+  if (reading) renderPaper(a ? a : state);
+  $("agent").hidden = !a;
+  if (a) {
+    $("board").hidden = true;
+    $("detail").hidden = true;
+    renderAgent();
+    return;
+  }
   renderBoard();
   renderDetail();
 }
 
-function renderPaper() {
-  const t = state.text;
-  if (!state.refs.length) { $("read").innerHTML = esc(t); return; }
+function renderPaper(view) {
+  const t = view.text;
+  if (!view.refs.length) { $("read").innerHTML = esc(t); return; }
   let html = "", at = 0;
-  for (const r of [...state.refs].sort((a, b) => a.start - b.start)) {
+  for (const r of [...view.refs].sort((a, b) => a.start - b.start)) {
     if (r.start < at) continue;
     const v = verdictFor(r, state.focus);
     html += esc(t.slice(at, r.start));
-    html += `<span class="ref ${v ? "v-" + v : "wait"} ${state.selected === r.id ? "sel" : ""}" data-ref="${r.id}" tabindex="0" role="button" aria-label="${esc(r.surface)}: ${v ? WORD[v] : "scoring"} in ${esc(state.focus)}">${esc(t.slice(r.start, r.end))}</span>`;
+    html += `<span class="ref ${v ? "v-" + v : "wait"} ${state.selected === r.id ? "sel" : ""} ${r.swapped_from ? "swapped" : ""}" title="${r.swapped_from ? "Was " + esc(r.swapped_from) : ""}" data-ref="${r.id}" tabindex="0" role="button" aria-label="${esc(r.surface)}: ${v ? WORD[v] : "scoring"} in ${esc(state.focus)}">${esc(t.slice(r.start, r.end))}</span>`;
     at = r.end;
   }
   $("read").innerHTML = html + esc(t.slice(at));
 }
 
-function roomScore(city) {
-  const vals = state.refs.map((r) => verdictFor(r, city)).filter((v) => v in VALUE);
+function roomScore(city, refs = state.refs) {
+  const vals = refs.map((r) => verdictFor(r, city)).filter((v) => v in VALUE);
   if (!vals.length) return null;
   return Math.round(100 * vals.reduce((a, v) => a + VALUE[v], 0) / vals.length);
 }
@@ -253,6 +266,7 @@ function renderBoard() {
     board.innerHTML = `<p class="empty">Reading…</p>`;
     return;
   }
+  const scoring = state.refs.some((r) => scorable(r) && !scoreOf(r));
   const head = state.cities.map((c) => {
     const n = roomScore(c);
     return `<th><button class="colhead ${c === state.focus ? "focus" : ""}" data-focus="${esc(c)}" type="button">
@@ -263,7 +277,11 @@ function renderBoard() {
       <span>${esc(r.outside ? "outside the graph" : (r.match?.type || r.type).replace("_", " "))}</span></button></td>
       ${state.cities.map((c) => `<td>${cell(r, c)}</td>`).join("")}</tr>`).join("");
   board.innerHTML = `<table class="board"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
-    <p class="boardnote">The number under each city is how much of the script lands there. Tap a city to underline the script for it.</p>`;
+    <p class="boardnote">The number under each city is how much of the script lands there. Tap a city to underline the script for it.</p>
+    <div class="agentcall">
+      <button class="primary" data-agent type="button" ${scoring ? "disabled" : ""}>Rewrite for ${esc(state.focus)}</button>
+      <p>An agent swaps what dies in ${esc(state.focus)}, keeps what the line needs, and shows every step.</p>
+    </div>`;
 }
 
 function bar(label, cls, v) {
@@ -359,6 +377,105 @@ function renderSwaps(ref, city, sw) {
   }).join("")}</div>`;
 }
 
+// ---------- the rewrite agent ----------
+
+const TARGET = 80;
+const WHO = { you: "You", gemini: "Gemini", qloo: "Qloo", room: "Room" };
+
+async function runAgent() {
+  const city = state.focus;
+  const a = {
+    city, running: true, trace: [], edits: 0, text: state.text,
+    refs: state.refs.map((r) => ({ ...r, score: scoreOf(r) })),
+  };
+  a.before = Object.fromEntries(state.cities.map((c) => [c, roomScore(c, a.refs)]));
+  state.agent = a;
+  state.selected = null;
+  const live = () => state.agent === a;
+  const push = (entries) => { if (!live()) return; a.trace.push(...entries); render(); };
+  push([{ who: "you", text: `Make this land in ${city}.` }]);
+  try {
+    const p = await api("/agent/plan", { text: a.text, refs: a.refs, city });
+    push(p.trace);
+    for (const step of p.plan) {
+      if (!live()) return;
+      if (step.action !== "swap") continue;
+      const ref = a.refs.find((r) => r.id === step.ref_id);
+      if (!ref) continue;
+      a.step = ref.surface;
+      render();
+      const f = await api("/agent/find", { ref, city, exclude: a.refs.filter((r) => r.match).map((r) => r.match.entity_id) });
+      push(f.trace);
+      if (!f.picks.length || !live()) continue;
+      const t = await api("/agent/test", {
+        text: a.text, refs: a.refs, ref_id: ref.id, picks: f.picks, city,
+        cities: state.cities, age: state.age || null,
+      });
+      if (!live()) return;
+      if (t.applied) { a.text = t.text; a.refs = t.refs; a.edits += 1; }
+      push(t.trace);
+      if ((roomScore(city, a.refs) ?? 0) >= TARGET) {
+        push([{ who: "room", text: `${city} clears ${TARGET}%. Stopping here.` }]);
+        break;
+      }
+    }
+  } catch (err) {
+    push([{ who: "room", text: err.message, kind: "error" }]);
+  }
+  if (!live()) return;
+  a.running = false;
+  a.step = null;
+  push([{ who: "room", kind: "done", text: a.edits
+    ? `Done. ${a.edits} line${a.edits > 1 ? "s" : ""} rewritten for ${city}.`
+    : `Done. The script stays as written for ${city}.` }]);
+}
+
+function renderAgent() {
+  const a = state.agent;
+  const scores = state.cities.map((c) => {
+    const b = a.before[c], n = roomScore(c, a.refs);
+    const d = n != null && b != null ? n - b : 0;
+    return `<div class="ascore ${c === a.city ? "focus" : ""}"><span class="c">${esc(c)}</span>
+      <span class="n">${n ?? "··"}<i>%</i></span>
+      <span class="d ${d > 0 ? "up" : d < 0 ? "down" : ""}">${d > 0 ? "+" + d : d < 0 ? d : "±0"}</span></div>`;
+  }).join("");
+  const trace = a.trace.map((e) => `
+    <li class="t-${e.who} ${e.kind ? "k-" + e.kind : ""}">
+      <span class="who">${WHO[e.who] || e.who}</span>
+      <span class="what">${esc(e.text)}</span>
+      ${e.ms >= 100 ? `<span class="ms">${(e.ms / 1000).toFixed(1)} s</span>` : "<span></span>"}
+    </li>`).join("");
+  $("agent").innerHTML = `
+    <button class="back" data-agent-discard type="button">← The whole room</button>
+    <h2 class="dname">Rewrite for ${esc(a.city)}</h2>
+    <p class="why">Target ${TARGET}% in ${esc(a.city)}. Every Qloo call and every choice is on the record.</p>
+    <div class="ascores">${scores}</div>
+    <ol class="trace">${trace}</ol>
+    ${a.running ? `<p class="working"><span class="dot"></span>${a.step ? `Working on ${esc(a.step)}…` : "Planning…"}</p>` : `
+    <div class="agentdone">
+      ${a.edits ? `<button class="primary" data-agent-use type="button">Use this version</button>` : ""}
+      <button class="ghost" data-agent-discard type="button">${a.edits ? "Discard" : "Back to the room"}</button>
+    </div>`}`;
+  status(a.running ? `The agent is rewriting for ${a.city}. The paper shows its draft.`
+    : a.edits ? "The paper shows the agent's draft. Use it or discard it." : "");
+  const list = $("agent").querySelector(".trace");
+  if (list) list.scrollTop = list.scrollHeight;
+}
+
+function useAgent() {
+  const a = state.agent;
+  const key = roomKey();
+  state.text = a.text;
+  state.refs = a.refs.map(({ score, ...r }) => r);
+  state.scores = Object.fromEntries(a.refs.filter((r) => r.score).map((r) => [r.id, { key, data: r.score }]));
+  state.swaps = {};
+  state.agent = null;
+  store.set("text", state.text);
+  $("script").value = state.text;
+  render();
+  summarise();
+}
+
 // ---------- detail actions ----------
 
 async function findSwap(refId, city) {
@@ -433,6 +550,9 @@ function useSwap(refId, city, i) {
 
 $("panel").addEventListener("click", (e) => {
   const t = e.target;
+  if (t.closest("[data-agent]")) { runAgent(); return; }
+  if (t.closest("[data-agent-use]")) { useAgent(); return; }
+  if (t.closest("[data-agent-discard]")) { state.agent = null; render(); summarise(); return; }
   if (t.closest("[data-back]")) { state.selected = null; render(); return; }
   if (t.closest("[data-math]")) { state.math = !state.math; renderDetail(); return; }
   const f = t.closest("[data-focus]");
@@ -460,6 +580,7 @@ $("panel").addEventListener("change", async (e) => {
 });
 
 function select(id) {
+  if (state.agent) return;
   state.selected = id;
   render();
   if (window.innerWidth < 920) $("panel").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -477,6 +598,7 @@ $("read").addEventListener("keydown", (e) => {
 
 $("readBtn").addEventListener("click", readRoom);
 $("editBtn").addEventListener("click", () => {
+  state.agent = null;
   state.mode = "compose";
   state.selected = null;
   state.gen++;

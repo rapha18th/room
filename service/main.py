@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
+import agent  # noqa: E402
 import engine  # noqa: E402
 from cache import cache, Cache  # noqa: E402
 import llm  # noqa: E402
@@ -126,6 +127,49 @@ async def swap(body: SwapIn, request: Request):
     if not cands:
         return {"swaps": []}
     return {"swaps": await llm.pick_swaps(body.sentence, body.surface, body.role, body.city, cands)}
+
+
+# ---------- the rewrite agent: one short step per request ----------
+
+class AgentPlanIn(BaseModel):
+    text: str = Field(max_length=MAX_TEXT)
+    refs: list[dict] = Field(max_length=30)
+    city: str
+
+
+@app.post("/api/agent/plan")
+async def agent_plan(body: AgentPlanIn, request: Request):
+    limit(request, 12)
+    return await agent.plan(body.text, body.refs, body.city)
+
+
+class AgentFindIn(BaseModel):
+    ref: dict
+    city: str
+    exclude: list[str] = Field(default_factory=list, max_length=40)
+
+
+@app.post("/api/agent/find")
+async def agent_find(body: AgentFindIn, request: Request):
+    limit(request, 30)
+    return await agent.find(body.ref, body.city, body.exclude)
+
+
+class AgentTestIn(BaseModel):
+    text: str = Field(max_length=MAX_TEXT)
+    refs: list[dict] = Field(max_length=30)
+    ref_id: str
+    picks: list[dict] = Field(max_length=3)
+    city: str
+    cities: list[str] = Field(min_length=1, max_length=MAX_CITIES)
+    age: str | None = None
+
+
+@app.post("/api/agent/test")
+async def agent_test(body: AgentTestIn, request: Request):
+    limit(request, 30)
+    check_age(body.age)
+    return await agent.test(body.text, body.refs, body.ref_id, body.picks, body.city, body.cities, body.age)
 
 
 @app.get("/api/search")

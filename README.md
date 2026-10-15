@@ -17,6 +17,20 @@ Room runs on [Qloo's](https://www.qloo.com) taste graph. An LLM alone can guess 
 5. **Verdict.** *Lands* (known and loved), *Roast* (known, kept at a distance), *Inside* (a slice of the room loves it), *Dies* (unknown), *Famous* (globally famous with a thin local fan base).
 6. **Swap.** For a weak city, Qloo returns what that audience has affinity for, by taste similarity and by shared tags. Gemini keeps the candidates that do the same job, rewrites the line, and Room scores each swap in the same room.
 
+## The rewrite agent
+
+One button: **Rewrite for Atlanta**. The agent works in three tools and shows every step in a live trace, while the script on the page rewrites itself.
+
+| Step | Who | What happens |
+|---|---|---|
+| Plan | Gemini | Reads the script and the room's verdicts, then decides which weak references to swap and which to keep. A reference stays when its foreignness is the point of the line. |
+| Find | Qloo, then Gemini | Qloo returns what the audience has affinity for; Gemini keeps the picks that do the same job and rewrites the line. |
+| Test | Qloo | Scores every pick in the same room with a fresh heatmap. The best one that lands goes into the script. |
+
+The agent stops when the city clears 80% or the plan runs out, and reports what the rewrite costs in every other city. Each step is its own short request, so the browser drives the loop and the trace streams as it happens.
+
+On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (62% to 82%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
+
 ## Qloo endpoints
 
 | Endpoint | Use |
