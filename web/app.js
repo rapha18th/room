@@ -24,6 +24,10 @@ const LEGEND = {
   outside: "Foods, slang, holidays and events sit outside Qloo's graph. Room leaves them unscored.",
 };
 const ACT = { swap: "Swap", drop: "Drop", keep: "Keep" };
+const SHORT = { lands: "lands", roast: "roast", inside: "inside", dies: "dies", famous: "famous", global: "famous",
+  unscored: "n/a", outside: "off" };
+const APPLE = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+const MOD = APPLE ? "⌘" : "Ctrl";
 const WHO = { you: "You", gemini: "Gemini", qloo: "Qloo", room: "Room" };
 
 const SAMPLES = [
@@ -141,15 +145,60 @@ function roomScore(city, refs = state.refs, verdict = verdictFor) {
 
 function status(msg) { $("status").textContent = msg || ""; }
 
+const FOCUS_KEYS = ["data-item", "data-card", "data-ref", "data-age", "data-focus", "data-remove", "data-stop", "data-unstop", "data-mode"];
+function focusKey(el) {
+  if (!el || el === document.body || !el.getAttribute) return null;
+  if (el.id) return `#${CSS.escape(el.id)}`;
+  for (const a of FOCUS_KEYS) if (el.hasAttribute(a)) return `[${a}="${CSS.escape(el.getAttribute(a))}"]`;
+  if (el.dataset?.act) return `[data-act="${CSS.escape(el.dataset.act)}"]` + (el.dataset.arg != null ? `[data-arg="${CSS.escape(el.dataset.arg)}"]` : "");
+  return null;
+}
+// Run a DOM update; if it replaced the focused element, focus its twin in the new DOM.
+function keepFocus(update) {
+  const el = document.activeElement;
+  const key = focusKey(el);
+  update();
+  if (key && el && !el.isConnected) document.querySelector(key)?.focus({ preventScroll: true });
+}
+function focusSoon(selector) {
+  requestAnimationFrame(() => document.querySelector(selector)?.focus({ preventScroll: true }));
+  setTimeout(() => { const el = document.querySelector(selector); if (el && document.activeElement !== el) el.focus({ preventScroll: true }); }, 350);
+}
+
+// ---------- undo: every accepted edit can be taken back ----------
+const history = [];
+function snapshot() {
+  return { text: state.text, refs: state.refs.map((r) => ({ ...r })), scores: { ...state.scores }, review: state.review ? state.review.items.map((it) => it.status) : null };
+}
+function undo() {
+  const h = history.pop();
+  if (!h) return;
+  state.text = h.text;
+  state.refs = h.refs;
+  state.scores = h.scores;
+  if (state.review && h.review) {
+    state.review.items.forEach((it, i) => { if (h.review[i]) it.status = h.review[i]; });
+    state.review.lastAccepted = null;
+  }
+  state.tour.run = null;
+  state.tour.versions = {};
+  state.guess = null;
+  store.set("text", state.text);
+  $("script").value = state.text;
+  render();
+  status("Undone.");
+}
+
 // ---------- controls ----------
 
-function renderControls() {
-  document.querySelectorAll("#modes [data-mode]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mode === state.tab)));
+function renderControls() { keepFocus(renderControlsNow); }
+function renderControlsNow() {
+  document.querySelectorAll("#modes [data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === state.tab)));
   $("roomGroup").hidden = state.tab !== "room";
   $("tourGroup").hidden = state.tab !== "tour";
   $("chips").innerHTML = state.cities.map((c) => `
     <span class="chip ${c === state.focus ? "focus" : ""}">
-      <button class="name" data-focus="${esc(c)}" type="button" title="Underline the script for ${esc(c)}">${esc(c)}</button>
+      <button class="name" data-focus="${esc(c)}" type="button" aria-pressed="${c === state.focus}" title="Underline the script for ${esc(c)}">${esc(c)}</button>
       <button class="x" data-remove="${esc(c)}" type="button" aria-label="Remove ${esc(c)}">×</button>
     </span>`).join("");
   const full = state.cities.length >= MAX_CITIES;
@@ -163,7 +212,7 @@ function renderControls() {
   $("stopInput").disabled = tourFull;
   $("stopInput").placeholder = tourFull ? "Eight stops max" : "Add a stop";
   $("ages").innerHTML = AGES.map(([v, l]) =>
-    `<button type="button" role="radio" aria-checked="${v === state.age}" data-age="${v}">${l}</button>`).join("");
+    `<button type="button" aria-pressed="${v === state.age}" data-age="${v}">${l}</button>`).join("");
 }
 
 function setTab(tab) {
@@ -340,7 +389,17 @@ function commit(view) {
 
 // ---------- the paper ----------
 
-function render() {
+function render() { keepFocus(renderNow); }
+
+// The light sits on the paper while you write and moves to the panel while you review.
+function moveSpot() {
+  const target = state.review || state.selected || state.tab === "tour" ? $("panel") : $("paper");
+  const r = target.getBoundingClientRect();
+  if (!r.width) return;
+  $("spot").style.setProperty("--sx", `${Math.round(r.left + r.width / 2 - innerWidth * 0.4)}px`);
+}
+
+function renderNow() {
   const reading = state.mode === "read";
   $("script").hidden = reading;
   $("read").hidden = !reading;
@@ -350,9 +409,11 @@ function render() {
     ? (state.doc.kind === "pdf" ? "Download as Word" : `Download ${KINDS[state.doc.kind]}`)
     : "Download text";
   $("readBtn").textContent = reading ? "Read again" : "Read the room";
+  $("undoBtn").hidden = !reading || !history.length;
   $("slug").textContent = state.slug;
   if (reading) renderPaper();
   renderPanel();
+  moveSpot();
 }
 
 function paperView() {
@@ -395,7 +456,7 @@ function renderPaper() {
   marks.sort((a, b) => a.pos - b.pos || (a.label ? -1 : 1));
   const touring = state.tab === "tour";
   const focus = touring ? (state.tour.active || state.tour.stops[0]) : state.focus;
-  let html = "", at = 0;
+  let html = "", at = 0, refIndex = 0;
   for (const m of marks) {
     if (m.pos < at) continue;
     if (m.label) {
@@ -411,12 +472,18 @@ function renderPaper() {
     if (it) {
       const p = it.proposal;
       const words = p.action === "swap" ? (() => { const s = swapSpan(p.sentence, p.line, p.after); return s ? p.line.substr(s.at, s.len) : p.after; })() : "";
-      html += `<span class="sug ${p.action} ${state.review.current === it.id ? "active" : ""}" data-item="${esc(it.id)}" tabindex="0" role="button" aria-label="${esc(ACT[p.action])} ${word}${words ? " for " + esc(words) : ""}"><span class="old">${word}</span>${words ? `<span class="new">${esc(words)}</span>` : ""}</span>`;
+      html += `<span class="sug ${p.action} ${state.review.current === it.id ? "active" : ""}" data-item="${esc(it.id)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="Suggestion: ${esc(ACT[p.action])} ${word}${words ? " for " + esc(words) : ""}"><span class="old">${word}</span>${words ? `<span class="new">${esc(words)}</span>` : ""}</span>`;
     } else {
       const sc = touring ? (r.score || tourScoreOf(r)) : null;
-      const v = sc ? measuredVerdict(r, focus, sc) : verdictFor(r, touring ? state.focus : focus);
-      const cls = `ref ${v ? "v-" + v : "wait"} ${state.selected === r.id ? "sel" : ""} ${r.swapped_from ? "swapped" : ""}`;
-      html += `<span class="${cls}" ${r.swapped_from ? `title="Was ${esc(r.swapped_from)}"` : ""} data-ref="${esc(r.id)}" tabindex="0" role="button" aria-label="${word}: ${v ? WORD[v] : "scoring"} in ${esc(focus)}">${word}</span>`;
+      const labelCity = sc ? focus : (touring ? state.focus : focus);
+      const v = sc ? measuredVerdict(r, focus, sc) : verdictFor(r, labelCity);
+      const said = `${v ? WORD[v] : "scoring"} in ${labelCity}${r.swapped_from ? `, was ${r.swapped_from}` : ""}`;
+      const live = !state.review && !touring;   // only the board view opens a reference
+      const cls = `ref ${v ? "v-" + v : "wait"} ${state.selected === r.id ? "sel" : ""} ${r.swapped_from ? "swapped" : ""} ${live ? "" : "static"}`;
+      const n = refIndex++;
+      html += live
+        ? `<span class="${cls}" style="--i:${n}" ${r.swapped_from ? `title="Was ${esc(r.swapped_from)}"` : ""} data-ref="${esc(r.id)}" tabindex="0" role="button" aria-label="${word}: ${esc(said)}">${word}</span>`
+        : `<span class="${cls}" style="--i:${n}">${word}<span class="sr"> (${esc(said)})</span></span>`;
     }
     at = r.end;
   }
@@ -425,7 +492,8 @@ function renderPaper() {
 
 // ---------- the panel ----------
 
-function renderPanel() {
+function renderPanel() { keepFocus(renderPanelNow); }
+function renderPanelNow() {
   const panel = $("panel");
   if (state.tab === "tour") panel.innerHTML = state.tour.active ? stopHtml() : tourHtml();
   else if (state.review) panel.innerHTML = reviewHtml();
@@ -443,7 +511,7 @@ function cell(ref, city) {
   const other = state.lens === "gemini" ? measuredVerdict(ref, city) : guessVerdict(ref, city);
   const differs = other && other !== v && !["outside", "unscored"].includes(v);
   const tip = differs ? `${state.lens === "gemini" ? "Room says" : "Gemini alone says"}: ${WORD[other]}` : (LEGEND[v] || "");
-  return `<span class="cell v-${v} ${low ? "low" : ""} ${differs ? "differs" : ""}" title="${esc(tip)}">${WORD[v]}</span>`;
+  return `<span class="cell v-${v} ${low ? "low" : ""} ${differs ? "differs" : ""}" title="${esc(tip)}"><span class="long">${WORD[v]}</span><span class="short" aria-hidden="true">${SHORT[v] || v}</span>${low ? `<span class="sr">, low confidence</span>` : ""}${differs ? `<span class="sr">, ${esc(tip)}</span>` : ""}</span>`;
 }
 
 const pct = (n, key) => (n == null ? `<span class="n">··</span>` : `<span class="n"><span data-tick="${n}" data-key="${esc(key)}">${n}</span><i>%</i></span>`);
@@ -455,7 +523,7 @@ function boardHtml() {
   }
   if (!state.refs.length) return `<p class="empty">Reading…</p>`;
   const scoring = state.refs.some((r) => scorable(r) && !scoreOf(r));
-  const head = state.cities.map((c) => `<th><button class="colhead ${c === state.focus ? "focus" : ""}" data-focus="${esc(c)}" type="button">
+  const head = state.cities.map((c) => `<th><button class="colhead ${c === state.focus ? "focus" : ""}" data-focus="${esc(c)}" type="button" aria-pressed="${c === state.focus}" title="${esc(c)}">
       <span class="c">${esc(c)}</span>${pct(roomScore(c), "room:" + c)}</button></th>`).join("");
   const rows = state.refs.map((r) => `
     <tr><td><button class="rowname" data-ref="${esc(r.id)}" type="button"><b>${esc(r.surface)}</b>
@@ -466,9 +534,9 @@ function boardHtml() {
     ? (g?.loading ? "Asking Gemini to guess from memory…" : g?.error ? esc(g.error)
       : "Gemini guessing everything from memory, Loved included. Outlined cells are where it disagrees with Room.")
     : (g?.key === roomKey() && g.data ? "Outlined cells are where Gemini alone disagrees with Room." : "");
-  return `<div class="lens" role="radiogroup" aria-label="Whose verdicts">
-      <button type="button" role="radio" aria-checked="${state.lens === "qloo"}" data-act="lens" data-arg="qloo">Room</button>
-      <button type="button" role="radio" aria-checked="${state.lens === "gemini"}" data-act="lens" data-arg="gemini">Gemini alone</button>
+  return `<div class="lens" role="group" aria-label="Whose verdicts">
+      <button type="button" aria-pressed="${state.lens === "qloo"}" data-act="lens" data-arg="qloo">Room</button>
+      <button type="button" aria-pressed="${state.lens === "gemini"}" data-act="lens" data-arg="gemini">Gemini alone</button>
     </div>${lensNote ? `<p class="lensnote">${lensNote}</p>` : ""}
     <table class="board"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <p class="boardnote">The number under each city is how much of the script lands there. Tap a city to underline the script for it.</p>
@@ -517,7 +585,7 @@ function detailHtml() {
   const home = s?.elsewhere && !state.cities.includes(s.elsewhere.city)
     ? `<p class="elsewhere">Its fans cluster hardest in <b>${esc(s.elsewhere.city)}</b> across Room's anchor cities.</p>` : "";
   return `<button class="back" data-act="back" type="button">← The whole room</button>
-    <h2 class="dname">${esc(ref.surface)}</h2>
+    <h2 class="dname" tabindex="-1" id="detailTitle">${esc(ref.surface)}</h2>
     <div class="dmeta">${meta}</div>
     <p class="job"><span>Its job in the line</span>${esc(ref.role)}</p>
     ${s?.error ? `<p class="why warn">${esc(s.error)}</p>` : ""}
@@ -567,7 +635,7 @@ function cardHtml(it, inPop = false) {
     <p class="pair">${pair}</p>
     <p class="diff">${diffHtml(p.sentence, p.line)}</p>
     ${p.why || it.why ? `<p class="swhy">${esc(p.why || it.why)}</p>` : ""}
-    ${done ? `<p class="swhy" style="margin-top:8px">${done}.</p>` : `<div class="card-actions">
+    ${done ? `<p class="done-line">${done === "Accepted" ? "✓ " : ""}${done}.${done === "Accepted" && state.review.lastAccepted === it.id && history.length ? ` <button class="ghost" data-act="undo" type="button" style="padding:3px 10px;font-size:12px;margin-left:6px">Undo</button>` : ""}</p>` : `<div class="card-actions">
       <button class="primary" data-act="accept" data-arg="${esc(it.id)}" type="button">Accept${cur && !inPop ? " <kbd>A</kbd>" : ""}</button>
       <button class="ghost" data-act="ignore" data-arg="${esc(it.id)}" type="button">Ignore${cur && !inPop ? " <kbd>I</kbd>" : ""}</button></div>`}
   </div>`;
@@ -582,7 +650,7 @@ function reviewHtml() {
   const pending = rv.items.filter((it) => it.status === "pending").length;
   return `<button class="back" data-act="close-review" type="button">← The whole room</button>
     <div class="rhead">
-      <div><p class="kicker">Review</p><h2 class="dname">For ${esc(rv.city)}</h2></div>
+      <div><p class="kicker">Review</p><h2 class="dname" tabindex="-1" id="reviewTitle">For ${esc(rv.city)}</h2></div>
       <div class="score"><span class="from">${rv.before ?? "··"}% →</span> ${pct(after, "review:" + rv.city)}
         ${d ? `<span class="d ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</span>` : ""}</div>
     </div>
@@ -612,6 +680,7 @@ async function startReview(city = state.focus) {
   state.selected = null;
   state.review = rv;
   transition(render);
+  focusSoon("#reviewTitle");
   status(`Reviewing for ${city}…`);
   const live = () => state.review === rv;
   try {
@@ -621,7 +690,13 @@ async function startReview(city = state.focus) {
       onItem: (it) => {
         if (!rv.items.includes(it)) rv.items.push(it);
         if (!rv.current && it.status === "pending") rv.current = it.id;
-        if (live()) render();
+        if (live()) {
+          render();
+          if (it.status === "pending") {
+            const n = rv.items.filter((x) => x.status === "pending").length;
+            status(`${plural(n, "suggestion")} ready for ${city}.`);
+          }
+        }
       },
     });
     rv.before = r.before ?? rv.before;
@@ -648,28 +723,59 @@ function nextPending(fromId) {
   return (state.review.items.slice(i + 1).find((it) => it.status === "pending") || items[0]).id;
 }
 
-async function accept(id) {
+// Accepts run one at a time: a cut that waits on a fresh rewrite must see every edit committed before it,
+// or it would write the old line back over them.
+let acceptQueue = Promise.resolve();
+function accept(id, from = "panel") {
+  const it = state.review?.items.find((x) => x.id === id);
+  if (!it || it.status !== "pending") return acceptQueue;
+  it.status = "queued";
+  acceptQueue = acceptQueue.then(() => acceptNow(id, from)).catch(() => {});
+  return acceptQueue;
+}
+
+async function acceptNow(id, from) {
   const rv = state.review;
   const it = rv?.items.find((x) => x.id === id);
-  if (!it || it.status !== "pending") return;
+  if (!it || it.status !== "queued") return;
+  const before = snapshot();
   it.status = "busy";
   const view = { text: state.text, refs: state.refs.map((r) => ({ ...r, score: scoreOf(r) })) };
   const next = await applyProposal(view, it.proposal, recut).catch(() => null);
   if (!next) { it.status = "error"; it.error = "That line changed. Read the room again."; render(); return; }
+  before.review[rv.items.indexOf(it)] = "pending";
+  history.push(before);
+  if (state.doc) {
+    state.doc.notes.push({ before: it.proposal.sentence, after: it.proposal.line, why: it.proposal.why || it.why || "" });
+    state.doc.audience = rv.city;
+  }
   it.status = "accepted";
+  rv.lastAccepted = id;
   commit(next);
   rv.current = nextPending(id);
   closePop();
   render();
+  const left = rv.items.filter((x) => x.status === "pending").length;
+  status(left ? `Accepted. ${left} left.` : `Accepted. That was the last one.`);
+  focusNext(from);
 }
 
-function ignore(id) {
+function focusNext(from) {
+  const id = state.review?.current;
+  if (!id) { focusSoon("#reviewTitle"); return; }
+  focusSoon(from === "paper" ? `.sug[data-item="${CSS.escape(id)}"]` : `[data-act="accept"][data-arg="${CSS.escape(id)}"]`);
+}
+
+function ignore(id, from = "panel") {
   const it = state.review?.items.find((x) => x.id === id);
   if (!it || it.status !== "pending") return;
   it.status = "ignored";
   state.review.current = nextPending(id);
   closePop();
   render();
+  const left = state.review.items.filter((x) => x.status === "pending").length;
+  status(left ? `Ignored. ${left} left.` : "Ignored. That was the last one.");
+  focusNext(from);
 }
 
 async function acceptAll() {
@@ -679,6 +785,7 @@ async function acceptAll() {
 function closeReview() {
   state.review = null;
   transition(() => { render(); summarise(); });
+  focusSoon('[data-act="review"]');
   scoreAll();
 }
 
@@ -689,26 +796,40 @@ function move(step) {
   const i = Math.max(0, items.findIndex((it) => it.id === rv.current));
   rv.current = items[(i + step + items.length) % items.length].id;
   render();
-  $("panel").querySelector(`[data-card="${CSS.escape(rv.current)}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  $("panel").querySelector(`[data-card="${CSS.escape(rv.current)}"]`)?.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  focusSoon(`[data-act="accept"][data-arg="${CSS.escape(rv.current)}"]`);
 }
 
 // The suggestion on the page opens its card right next to the word.
+let popFrom = null;
 function openPop(el, id) {
   const it = state.review?.items.find((x) => x.id === id);
   const pop = $("pop");
   if (!it || !pop.showPopover) { state.review && (state.review.current = id, render()); return; }
   state.review.current = id;
+  popFrom = id;
   pop.innerHTML = cardHtml(it, true);
-  pop.showPopover();
-  const r = el.getBoundingClientRect();
-  const w = pop.offsetWidth, h = pop.offsetHeight;
-  const left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12);
-  const top = r.bottom + 10 + h < innerHeight ? r.bottom + 10 : Math.max(12, r.top - h - 10);
-  pop.style.left = `${left}px`;
-  pop.style.top = `${top}px`;
+  pop.setAttribute("aria-label", `Suggestion for ${it.proposal?.before || "this reference"}`);
+  document.querySelectorAll(".anchor").forEach((x) => x.classList.remove("anchor"));
+  el.classList.add("anchor");
+  const anchored = CSS.supports("position-area: block-end");
+  pop.classList.toggle("anchored", anchored);
+  try { pop.showPopover({ source: el }); } catch { pop.showPopover(); }
+  if (!anchored) {
+    const r = el.getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    pop.style.left = `${Math.min(Math.max(12, r.left + r.width / 2 - w / 2), innerWidth - w - 12)}px`;
+    pop.style.top = `${r.bottom + 10 + h < innerHeight ? r.bottom + 10 : Math.max(12, r.top - h - 10)}px`;
+  }
   renderPanel();
+  pop.querySelector('[data-act="accept"]')?.focus({ preventScroll: true });
 }
-function closePop() { try { $("pop").hidePopover?.(); } catch { /* not open */ } }
+function closePop(restore = false) {
+  const pop = $("pop");
+  const open = pop.matches?.(":popover-open");
+  try { pop.hidePopover?.(); } catch { /* not open */ }
+  if (open && restore && popFrom) focusSoon(`.sug[data-item="${CSS.escape(popFrom)}"]`);
+}
 
 // ---------- tour ----------
 
@@ -931,8 +1052,11 @@ async function useSwap(refId, city, i) {
   const next = await applyProposal(view, { action: "swap", ref_id: refId, sentence: ref.sentence, line: x.line,
     after: x.candidate.name, candidate: x.candidate, score: x.score }, null);
   if (!next) { status("That line changed. Read the room again."); return; }
+  history.push(snapshot());
+  if (state.doc) { state.doc.notes.push({ before: ref.sentence, after: x.line, why: x.why || "" }); state.doc.audience = city; }
   commit(next);
   render();
+  status(`Swapped in ${x.candidate.name}. ${MOD}+Z undoes it.`);
   scoreAll();
 }
 
@@ -943,7 +1067,7 @@ async function openFile(file) {
   status(`Opening ${file.name}…`);
   try {
     const doc = await parseFile(file);
-    state.doc = { file, name: doc.name, kind: doc.kind, blocks: doc.blocks };
+    state.doc = { file, name: doc.name, kind: doc.kind, blocks: doc.blocks, notes: [], audience: "" };
     state.slug = doc.name;
     store.set("slug", doc.name);
     $("script").value = joinBlocks(doc.blocks);
@@ -958,8 +1082,10 @@ async function openFile(file) {
 async function download() {
   try {
     if (state.doc) {
-      const r = await exportFile(state.doc, state.text);
-      status(`Saved ${r.name} with ${plural(r.changed, "change")}.`);
+      const r = await exportFile(state.doc, state.text, state.doc.notes, state.doc.audience || state.focus);
+      const how = state.doc.kind === "docx" || state.doc.kind === "pdf" ? " as tracked changes, each with its reason"
+        : state.doc.kind === "pptx" ? ", logged in the speaker notes" : "";
+      status(`Saved ${r.name} with ${plural(r.changed, "change")}${how}.`);
     } else {
       downloadText(`${(state.slug || "room").replace(/[^\w .-]+/g, "").trim() || "room"}.txt`, state.text);
     }
@@ -1000,9 +1126,10 @@ $("panel").addEventListener("click", (e) => {
     case "review": startReview(); break;
     case "accept": accept(arg); break;
     case "ignore": ignore(arg); break;
+    case "undo": undo(); break;
     case "accept-all": acceptAll(); break;
     case "close-review": closeReview(); break;
-    case "back": state.selected = null; transition(render); break;
+    case "back": { const was = state.selected; state.selected = null; transition(render); focusSoon(`.rowname[data-ref="${CSS.escape(was || "")}"]`); break; }
     case "math": state.math = !state.math; renderPanel(); break;
     case "swap": findSwap(arg, b.dataset.city); break;
     case "use-swap": useSwap(arg, b.dataset.city, +b.dataset.i); break;
@@ -1016,8 +1143,8 @@ $("panel").addEventListener("click", (e) => {
 $("pop").addEventListener("click", (e) => {
   const b = e.target.closest("[data-act]");
   if (!b) return;
-  if (b.dataset.act === "accept") accept(b.dataset.arg);
-  if (b.dataset.act === "ignore") ignore(b.dataset.arg);
+  if (b.dataset.act === "accept") accept(b.dataset.arg, "paper");
+  if (b.dataset.act === "ignore") ignore(b.dataset.arg, "paper");
 });
 
 $("panel").addEventListener("change", async (e) => {
@@ -1039,7 +1166,8 @@ function select(id) {
   if (state.review || state.tab === "tour") return;
   state.selected = id;
   transition(render);
-  if (innerWidth < 960) $("panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  focusSoon("#detailTitle");
+  if (innerWidth < 960) $("panel").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
 
 function onPaper(target) {
@@ -1090,7 +1218,7 @@ $("samples").addEventListener("click", (e) => { const b = e.target.closest("[dat
 function commands() {
   const reading = state.mode === "read" && state.refs.length;
   const list = [
-    { label: "Read the room", hint: "⌘↵", run: readRoom },
+    { label: "Read the room", hint: `${MOD}+Enter`, run: readRoom },
     { label: "Open a file", hint: "PDF, PPTX, DOCX", run: () => $("fileInput").click() },
   ];
   if (reading) {
@@ -1100,6 +1228,7 @@ function commands() {
     list.push({ label: state.lens === "gemini" ? "Show Room's verdicts" : "Show Gemini alone", run: () => { state.lens = state.lens === "gemini" ? "qloo" : "gemini"; render(); if (state.lens === "gemini") loadGuess(); } });
   }
   if (state.review?.items.some((it) => it.status === "pending")) list.push({ label: "Accept every suggestion", run: acceptAll });
+  if (history.length) list.push({ label: "Undo the last edit", hint: `${MOD}+Z`, run: undo });
   list.push({ label: state.tab === "tour" ? "Switch to Room" : "Switch to Tour", run: () => setTab(state.tab === "tour" ? "room" : "tour") });
   SAMPLES.forEach((s, i) => list.push({ label: `Sample: ${s.name}`, run: () => loadSample(i) }));
   AGES.forEach(([v, l]) => list.push({ label: `Audience: ${l}`, run: () => { state.age = v; store.set("age", v); renderControls(); if (state.mode === "read") { scoreAll(); render(); } } }));
@@ -1109,29 +1238,49 @@ function commands() {
 
 $("paletteBtn").addEventListener("click", () => openPalette(commands()));
 addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName);
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(commands()); return; }
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !typing && history.length) { e.preventDefault(); undo(); return; }
+  if (typing || document.querySelector("dialog[open]")) return;
   if (e.key === "Escape") {
-    if ($("pop").matches?.(":popover-open")) { closePop(); return; }
-    if (document.querySelector("dialog[open]")) return;
-    if (state.review) { closeReview(); return; }
-    if (state.selected) { state.selected = null; transition(render); return; }
+    if ($("pop").matches?.(":popover-open")) { closePop(true); return; }
+    if (state.selected) { const was = state.selected; state.selected = null; transition(render); focusSoon(`.rowname[data-ref="${CSS.escape(was)}"]`); return; }
     if (state.tour.active) { state.tour.active = null; transition(() => { renderControls(); render(); }); return; }
+    if (state.review) {
+      // Pending suggestions are work: leaving them takes the Done button, not a stray key.
+      if (state.review.running || state.review.items.some((it) => it.status === "pending")) { status("Use Done to leave the review."); return; }
+      closeReview();
+    }
     return;
   }
-  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.querySelector("dialog[open]");
-  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === "?") { $("how").showModal(); return; }
   if (!state.review) return;
+  // Letter keys act only while a review surface has focus: the panel, the paper or the suggestion card.
+  const on = document.activeElement?.closest?.("#panel, #read, #pop");
+  if (!on) return;
   const k = e.key.toLowerCase();
-  if (k === "j") move(1);
-  else if (k === "k") move(-1);
-  else if (k === "a" && state.review.current) accept(state.review.current);
-  else if (k === "i" && state.review.current) ignore(state.review.current);
+  const from = on.id === "panel" ? "panel" : "paper";
+  if (k === "j") { e.preventDefault(); move(1); }
+  else if (k === "k") { e.preventDefault(); move(-1); }
+  else if (k === "a" && state.review.current) { e.preventDefault(); accept(state.review.current, from); }
+  else if (k === "i" && state.review.current) { e.preventDefault(); ignore(state.review.current, from); }
+});
+
+// Paste a copied file to open it.
+addEventListener("paste", (e) => {
+  const f = e.clipboardData?.files?.[0];
+  if (f && accepts(f)) { e.preventDefault(); openFile(f); }
 });
 
 $("howBtn").addEventListener("click", () => $("how").showModal());
 $("legend").innerHTML = Object.entries(LEGEND).map(([k, v]) => `<dt class="vw v-${k}">${WORD[k]}</dt><dd>${v}</dd>`).join("");
 $("cityList").innerHTML = PRESETS.map((c) => `<option value="${c}">`).join("");
+
+document.querySelectorAll(".mod").forEach((el) => { el.textContent = MOD; });
+$("paletteBtn").setAttribute("aria-keyshortcuts", APPLE ? "Meta+K" : "Control+K");
+$("undoBtn").addEventListener("click", undo);
+addEventListener("resize", moveSpot);
 
 initPalette();
 $("script").value = state.text;

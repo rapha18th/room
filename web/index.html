@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="spot" aria-hidden="true"></div>
+  <div class="spot" id="spot" aria-hidden="true"></div>
 
   <header class="top">
     <div class="brand">
@@ -23,16 +23,16 @@
     </div>
     <div class="topactions">
       <button class="ghost" id="openBtn" type="button">Open a file</button>
-      <button class="ghost kbd" id="paletteBtn" type="button" aria-label="Commands"><span>⌘</span>K</button>
+      <button class="ghost kbd" id="paletteBtn" type="button"><span class="mod">⌘</span>K <span class="sr">commands</span></button>
       <button class="ghost" id="howBtn" type="button">How it reads</button>
       <input id="fileInput" type="file" accept=".pdf,.pptx,.docx,.txt,.md,.markdown" hidden>
     </div>
   </header>
 
   <section class="controls" aria-label="The audience">
-    <div class="seg modes" id="modes" role="tablist" aria-label="Mode">
-      <button type="button" role="tab" data-mode="room" aria-selected="true">Room</button>
-      <button type="button" role="tab" data-mode="tour" aria-selected="false">Tour</button>
+    <div class="seg modes" id="modes" role="group" aria-label="Mode">
+      <button type="button" data-mode="room" aria-pressed="true">Room</button>
+      <button type="button" data-mode="tour" aria-pressed="false">Tour</button>
     </div>
     <div class="group" id="roomGroup">
       <div class="chips" id="chips"></div>
@@ -48,7 +48,7 @@
     </div>
     <datalist id="cityList"></datalist>
     <div class="group age">
-      <div class="seg" id="ages" role="radiogroup" aria-label="Audience age"></div>
+      <div class="seg" id="ages" role="group" aria-label="Audience age"></div>
     </div>
   </section>
 
@@ -63,6 +63,7 @@
       <div class="paper-foot">
         <span class="status" id="status" aria-live="polite"></span>
         <div class="actions">
+          <button class="ghost dark" id="undoBtn" type="button" hidden>Undo</button>
           <button class="ghost dark" id="downloadBtn" type="button" hidden>Download</button>
           <button class="ghost dark" id="editBtn" type="button" hidden>Edit</button>
           <button class="primary" id="readBtn" type="button">Read the room</button>
@@ -70,7 +71,7 @@
       </div>
     </article>
 
-    <aside class="panel" id="panel" aria-live="polite"></aside>
+    <aside class="panel" id="panel" aria-label="The room"></aside>
   </main>
 
   <footer class="foot">
@@ -79,16 +80,17 @@
   </footer>
 
   <div class="dropzone" id="drop" hidden><p>Drop to read the room</p><small>PDF, PowerPoint, Word, text or Markdown</small></div>
-  <div class="pop" id="pop" popover></div>
+  <div class="pop" id="pop" popover role="dialog" aria-label="Suggestion"></div>
   <div id="print" class="print" aria-hidden="true"></div>
 
   <dialog id="palette" class="palette" aria-label="Commands">
-    <input id="paletteInput" placeholder="Type a command" autocomplete="off" spellcheck="false">
-    <ul id="paletteList" role="listbox"></ul>
+    <input id="paletteInput" placeholder="Type a command" autocomplete="off" spellcheck="false" role="combobox"
+      aria-label="Command" aria-expanded="true" aria-controls="paletteList" aria-autocomplete="list">
+    <ul id="paletteList" role="listbox" aria-label="Commands"></ul>
   </dialog>
 
-  <dialog id="how">
-    <h2>How Room reads a script</h2>
+  <dialog id="how" aria-labelledby="howTitle">
+    <h2 id="howTitle">How Room reads a script</h2>
     <ol>
       <li><b>Read.</b> Gemini finds every reference and names the job it does in the line. Drop a PDF, a deck or a document and Room reads that too.</li>
       <li><b>Match.</b> Qloo search turns each one into an entity in its taste graph.</li>
@@ -97,7 +99,7 @@
       <li><b>Tour.</b> Give Room up to eight stops and it reviews the set for each one, then prints a set list per city.</li>
     </ol>
     <dl class="legend" id="legend"></dl>
-    <p class="keys"><kbd>⌘</kbd><kbd>K</kbd> commands · <kbd>⌘</kbd><kbd>↵</kbd> read · <kbd>A</kbd> accept · <kbd>I</kbd> ignore · <kbd>J</kbd><kbd>K</kbd> next and previous · <kbd>Esc</kbd> back</p>
+    <p class="keys"><kbd class="mod">⌘</kbd><kbd>K</kbd> commands · <kbd class="mod">⌘</kbd><kbd>↵</kbd> read · <kbd class="mod">⌘</kbd><kbd>Z</kbd> undo · in a review: <kbd>A</kbd> accept, <kbd>I</kbd> ignore, <kbd>J</kbd> <kbd>K</kbd> next and previous · <kbd>Esc</kbd> back. Letter keys work only while a suggestion, the paper or the panel has focus.</p>
     <form method="dialog"><button class="primary">Got it</button></form>
   </dialog>
 

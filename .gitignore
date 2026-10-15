@@ -9,3 +9,16 @@ node_modules/
 .claude/
 .firebase/
 docs/
+spike/review_*
+spike/rootcause_*
+spike/hometurf_*
+spike/mkdir_survey.py
+spike/html_text.py
+spike/bcd_support.py
+spike/mdn_snippets.py
+spike/spring_linear.py
+spike/qloo_claims_density_check.py
+spike/docs_bench.py
+spike/docs_office_check.py
+spike/docs_proto.py
+web/_t.*

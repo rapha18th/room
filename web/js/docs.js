@@ -44,15 +44,21 @@ export function downloadText(name, text) {
 }
 
 // Returns the saved filename. Throws when the paper's text no longer maps onto the file's blocks.
-export async function exportFile(doc, text) {
+// notes: accepted edits as { before, after, why }; each changed block carries the reasons that touched it.
+export async function exportFile(doc, text, notes = [], audience = "") {
   const parts = text.split("\n\n");
   if (parts.length !== doc.blocks.length) {
     throw new Error("The text no longer lines up with the file's paragraphs. Use Download text instead.");
   }
-  const changes = doc.blocks.map((b, i) => (parts[i] !== b.text ? { id: b.id, text: parts[i] } : null)).filter(Boolean);
+  const reasons = (old, now) => [...new Set(notes
+    .filter((n) => n.why && ((n.after && now.includes(n.after)) || (n.before && old.includes(n.before))))
+    .map((n) => n.why))].join(" ");
+  const changes = doc.blocks.map((b, i) => (parts[i] !== b.text
+    ? { id: b.id, text: parts[i], why: reasons(b.text, parts[i]) } : null)).filter(Boolean);
   const fd = new FormData();
   fd.append("file", doc.file, doc.name);
   fd.append("changes", JSON.stringify(changes));
+  fd.append("audience", audience);
   const res = await fetch("/api/doc/export", { method: "POST", body: fd });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

@@ -1,942 +1,4 @@
 {
- "n": 56,
- "top1": {
-  "qloo_map": 0.875,
-  "llm": 0.964,
-  "room": 0.946
- },
- "home_called_dead": {
-  "qloo_map": 4,
-  "llm": 0,
-  "room": 0
- },
- "rows": [
-  {
-   "name": "New York Knicks",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "New York Mets",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "Nathan's Famous",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "New York Rangers",
-   "home": "New York",
-   "qloo_map_top": "New York",
-   "llm_top": "New York",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "Los Angeles Dodgers",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "Los Angeles Clippers",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "El Pollo Loco",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "YG",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "Los Angeles Kings",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "In-N-Out Burger",
-   "home": "Los Angeles",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Los Angeles",
-   "room_top": "Los Angeles",
-   "room_mode": "map"
-  },
-  {
-   "name": "Dallas Mavericks",
-   "home": "Dallas",
-   "qloo_map_top": "Dallas",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Texas Rangers",
-   "home": "Dallas",
-   "qloo_map_top": "Dallas",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Whataburger",
-   "home": "Dallas",
-   "qloo_map_top": "Dallas",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Torchy's Tacos",
-   "home": "Dallas",
-   "qloo_map_top": "Dallas",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Dallas Stars",
-   "home": "Dallas",
-   "qloo_map_top": "Dallas",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Leon Bridges",
-   "home": "Dallas",
-   "qloo_map_top": "Los Angeles",
-   "llm_top": "Dallas",
-   "room_top": "Dallas",
-   "room_mode": "map"
-  },
-  {
-   "name": "Atlanta Hawks",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Atlanta Braves",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Zaxby's",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Gucci Mane",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Atlanta Falcons",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Waffle House",
-   "home": "Atlanta",
-   "qloo_map_top": "Atlanta",
-   "llm_top": "Atlanta",
-   "room_top": "Atlanta",
-   "room_mode": "map"
-  },
-  {
-   "name": "Toronto Raptors",
-   "home": "Toronto",
-   "qloo_map_top": "Toronto",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "Toronto Maple Leafs",
-   "home": "Toronto",
-   "qloo_map_top": "Toronto",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "Tim Hortons",
-   "home": "Toronto",
-   "qloo_map_top": "Toronto",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "PartyNextDoor",
-   "home": "Toronto",
-   "qloo_map_top": "New York",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "Swiss Chalet",
-   "home": "Toronto",
-   "qloo_map_top": "Toronto",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "Toronto Blue Jays",
-   "home": "Toronto",
-   "qloo_map_top": "Toronto",
-   "llm_top": "Toronto",
-   "room_top": "Toronto",
-   "room_mode": "map"
-  },
-  {
-   "name": "Greggs",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "EastEnders",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "Stormzy",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "Tottenham Hotspur F.C.",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "Pret A Manger",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "Coronation Street",
-   "home": "London",
-   "qloo_map_top": "London",
-   "llm_top": "London",
-   "room_top": "London",
-   "room_mode": "map"
-  },
-  {
-   "name": "Kaizer Chiefs F.C.",
-   "home": "Johannesburg",
-   "qloo_map_top": "Johannesburg",
-   "llm_top": "Johannesburg",
-   "room_top": "Johannesburg",
-   "room_mode": "map"
-  },
-  {
-   "name": "Orlando Pirates F.C.",
-   "home": "Johannesburg",
-   "qloo_map_top": "Johannesburg",
-   "llm_top": "Johannesburg",
-   "room_top": "Johannesburg",
-   "room_mode": "map"
-  },
-  {
-   "name": "Kabza De Small",
-   "home": "Johannesburg",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Johannesburg",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "DJ Maphorisa",
-   "home": "Johannesburg",
-   "qloo_map_top": "Johannesburg",
-   "llm_top": "Johannesburg",
-   "room_top": "Johannesburg",
-   "room_mode": "map"
-  },
-  {
-   "name": "Asake",
-   "home": "Lagos",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Lagos",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "Olamide",
-   "home": "Lagos",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Lagos",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "Wizkid",
-   "home": "Lagos",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Lagos",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "Big Brother Naija",
-   "home": "Lagos",
-   "qloo_map_top": "Lagos",
-   "llm_top": "London",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "King of Boys",
-   "home": "Lagos",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Lagos",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "Sauti Sol",
-   "home": "Nairobi",
-   "qloo_map_top": "Nairobi",
-   "llm_top": "Nairobi",
-   "room_top": "Nairobi",
-   "room_mode": "map"
-  },
-  {
-   "name": "Khaligraph Jones",
-   "home": "Nairobi",
-   "qloo_map_top": "Lagos",
-   "llm_top": "Nairobi",
-   "room_top": "Lagos",
-   "room_mode": "map"
-  },
-  {
-   "name": "Nviiri the Storyteller",
-   "home": "Nairobi",
-   "qloo_map_top": "New York",
-   "llm_top": "London",
-   "room_top": "New York",
-   "room_mode": "map"
-  },
-  {
-   "name": "Mumbai Indians",
-   "home": "Mumbai",
-   "qloo_map_top": "Mumbai",
-   "llm_top": "Mumbai",
-   "room_top": "Mumbai",
-   "room_mode": "map"
-  },
-  {
-   "name": "Arijit Singh",
-   "home": "Mumbai",
-   "qloo_map_top": "Mumbai",
-   "llm_top": "Mumbai",
-   "room_top": "Mumbai",
-   "room_mode": "map"
-  },
-  {
-   "name": "Haldiram's",
-   "home": "Mumbai",
-   "qloo_map_top": "Mumbai",
-   "llm_top": "Mumbai",
-   "room_top": "Mumbai",
-   "room_mode": "map"
-  },
-  {
-   "name": "Taarak Mehta Ka Ooltah Chashmah",
-   "home": "Mumbai",
-   "qloo_map_top": "Mumbai",
-   "llm_top": "Mumbai",
-   "room_top": "Mumbai",
-   "room_mode": "map"
-  },
-  {
-   "name": "Badshah",
-   "home": "Mumbai",
-   "qloo_map_top": "Mumbai",
-   "llm_top": "Mumbai",
-   "room_top": "Mumbai",
-   "room_mode": "map"
-  },
-  {
-   "name": "Pick n Pay",
-   "home": "Johannesburg",
-   "qloo_map_top": "Johannesburg",
-   "llm_top": "Johannesburg",
-   "room_top": "Johannesburg",
-   "room_mode": "map"
-  },
-  {
-   "name": "Bien",
-   "home": "Nairobi",
-   "qloo_map_top": "New York",
-   "llm_top": "Nairobi",
-   "room_top": "Nairobi",
-   "room_mode": "map"
-  },
-  {
-   "name": "Skeem Saam",
-   "home": "Johannesburg",
-   "qloo_map_top": null,
-   "llm_top": "Johannesburg",
-   "room_top": "Johannesburg",
-   "room_mode": "memory"
-  }
- ],
- "disagreements": [
-  {
-   "name": "Bien",
-   "city": "Nairobi",
-   "qloo_map": 0.0,
-   "llm": 0.95,
-   "room": 0.95
-  },
-  {
-   "name": "Skeem Saam",
-   "city": "Johannesburg",
-   "qloo_map": 0,
-   "llm": 0.92,
-   "room": 0.95
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "New York",
-   "qloo_map": 0.0,
-   "llm": 0.9,
-   "room": 0.9
-  },
-  {
-   "name": "Tim Hortons",
-   "city": "Toronto",
-   "qloo_map": 0.26,
-   "llm": 0.99,
-   "room": 0.99
-  },
-  {
-   "name": "Haldiram's",
-   "city": "Mumbai",
-   "qloo_map": 0.3,
-   "llm": 0.98,
-   "room": 0.95
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "Los Angeles",
-   "qloo_map": 0.0,
-   "llm": 0.65,
-   "room": 0.7
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "Atlanta",
-   "qloo_map": 0.0,
-   "llm": 0.65,
-   "room": 0.75
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "Toronto",
-   "qloo_map": 0.0,
-   "llm": 0.65,
-   "room": 0.7
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "Lagos",
-   "qloo_map": 1,
-   "llm": 0.35,
-   "room": 1.0
-  },
-  {
-   "name": "Pret A Manger",
-   "city": "New York",
-   "qloo_map": 0.19,
-   "llm": 0.8,
-   "room": 0.85
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Dallas",
-   "qloo_map": 0.21,
-   "llm": 0.8,
-   "room": 0.75
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "New York",
-   "qloo_map": 0.67,
-   "llm": 0.08,
-   "room": 0.67
-  },
-  {
-   "name": "Taarak Mehta Ka Ooltah Chashmah",
-   "city": "Mumbai",
-   "qloo_map": 0.33,
-   "llm": 0.92,
-   "room": 0.95
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "Dallas",
-   "qloo_map": 0.0,
-   "llm": 0.55,
-   "room": 0.65
-  },
-  {
-   "name": "Waffle House",
-   "city": "Dallas",
-   "qloo_map": 0.3,
-   "llm": 0.85,
-   "room": 0.9
-  },
-  {
-   "name": "Coronation Street",
-   "city": "London",
-   "qloo_map": 0.43,
-   "llm": 0.98,
-   "room": 0.95
-  },
-  {
-   "name": "Kabza De Small",
-   "city": "New York",
-   "qloo_map": 0.7,
-   "llm": 0.15,
-   "room": 0.7
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Toronto",
-   "qloo_map": 0.31,
-   "llm": 0.85,
-   "room": 0.85
-  },
-  {
-   "name": "Toronto Blue Jays",
-   "city": "Atlanta",
-   "qloo_map": 0.21,
-   "llm": 0.75,
-   "room": 0.85
-  },
-  {
-   "name": "Big Brother Naija",
-   "city": "London",
-   "qloo_map": 0.41,
-   "llm": 0.95,
-   "room": 0.95
-  },
-  {
-   "name": "Toronto Raptors",
-   "city": "Mumbai",
-   "qloo_map": 0.67,
-   "llm": 0.15,
-   "room": 0.67
-  },
-  {
-   "name": "Toronto Blue Jays",
-   "city": "Dallas",
-   "qloo_map": 0.23,
-   "llm": 0.75,
-   "room": 0.8
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "Johannesburg",
-   "qloo_map": 0.81,
-   "llm": 0.3,
-   "room": 0.81
-  },
-  {
-   "name": "A Boogie wit da Hoodie",
-   "city": "London",
-   "qloo_map": 0.0,
-   "llm": 0.5,
-   "room": 0.6
-  },
-  {
-   "name": "Toronto Raptors",
-   "city": "Nairobi",
-   "qloo_map": 0.7,
-   "llm": 0.2,
-   "room": 0.7
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "Atlanta",
-   "qloo_map": 0.59,
-   "llm": 0.1,
-   "room": 0.59
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "London",
-   "qloo_map": 0.32,
-   "llm": 0.8,
-   "room": 0.82
-  },
-  {
-   "name": "Kabza De Small",
-   "city": "Mumbai",
-   "qloo_map": 0.53,
-   "llm": 0.05,
-   "room": 0.53
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Atlanta",
-   "qloo_map": 0.38,
-   "llm": 0.85,
-   "room": 0.88
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Johannesburg",
-   "qloo_map": 0.13,
-   "llm": 0.6,
-   "room": 0.58
-  },
-  {
-   "name": "Toronto Maple Leafs",
-   "city": "Dallas",
-   "qloo_map": 0.14,
-   "llm": 0.6,
-   "room": 0.55
-  },
-  {
-   "name": "Toronto Raptors",
-   "city": "London",
-   "qloo_map": 0.75,
-   "llm": 0.3,
-   "room": 0.75
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "Mumbai",
-   "qloo_map": 0.48,
-   "llm": 0.03,
-   "room": 0.48
-  },
-  {
-   "name": "Toronto Maple Leafs",
-   "city": "Los Angeles",
-   "qloo_map": 0.27,
-   "llm": 0.7,
-   "room": 0.5
-  },
-  {
-   "name": "Kabza De Small",
-   "city": "Los Angeles",
-   "qloo_map": 0.54,
-   "llm": 0.12,
-   "room": 0.54
-  },
-  {
-   "name": "Toronto Maple Leafs",
-   "city": "New York",
-   "qloo_map": 0.33,
-   "llm": 0.75,
-   "room": 0.65
-  },
-  {
-   "name": "Waffle House",
-   "city": "Los Angeles",
-   "qloo_map": 0.28,
-   "llm": 0.7,
-   "room": 0.65
-  },
-  {
-   "name": "Kabza De Small",
-   "city": "Atlanta",
-   "qloo_map": 0.61,
-   "llm": 0.2,
-   "room": 0.61
-  },
-  {
-   "name": "Toronto Blue Jays",
-   "city": "Los Angeles",
-   "qloo_map": 0.4,
-   "llm": 0.8,
-   "room": 0.85
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "Los Angeles",
-   "qloo_map": 0.46,
-   "llm": 0.06,
-   "room": 0.46
-  },
-  {
-   "name": "Stormzy",
-   "city": "Johannesburg",
-   "qloo_map": 0.2,
-   "llm": 0.6,
-   "room": 0.45
-  },
-  {
-   "name": "Asake",
-   "city": "Mumbai",
-   "qloo_map": 0.49,
-   "llm": 0.1,
-   "room": 0.49
-  },
-  {
-   "name": "YG",
-   "city": "Lagos",
-   "qloo_map": 0.73,
-   "llm": 0.35,
-   "room": 0.73
-  },
-  {
-   "name": "Atlanta Falcons",
-   "city": "Toronto",
-   "qloo_map": 0.27,
-   "llm": 0.65,
-   "room": 0.65
-  },
-  {
-   "name": "EastEnders",
-   "city": "Johannesburg",
-   "qloo_map": 0.07,
-   "llm": 0.45,
-   "room": 0.4
-  },
-  {
-   "name": "Khaligraph Jones",
-   "city": "London",
-   "qloo_map": 0.58,
-   "llm": 0.2,
-   "room": 0.58
-  },
-  {
-   "name": "Sauti Sol",
-   "city": "Johannesburg",
-   "qloo_map": 0.18,
-   "llm": 0.55,
-   "room": 0.45
-  },
-  {
-   "name": "YG",
-   "city": "Mumbai",
-   "qloo_map": 0.62,
-   "llm": 0.25,
-   "room": 0.62
-  },
-  {
-   "name": "Los Angeles Clippers",
-   "city": "Nairobi",
-   "qloo_map": 0.56,
-   "llm": 0.2,
-   "room": 0.56
-  },
-  {
-   "name": "Atlanta Braves",
-   "city": "Toronto",
-   "qloo_map": 0.24,
-   "llm": 0.6,
-   "room": 0.7
-  },
-  {
-   "name": "Nathan's Famous",
-   "city": "Toronto",
-   "qloo_map": 0.1,
-   "llm": 0.45,
-   "room": 0.45
-  },
-  {
-   "name": "Los Angeles Clippers",
-   "city": "Lagos",
-   "qloo_map": 0.54,
-   "llm": 0.2,
-   "room": 0.54
-  },
-  {
-   "name": "Nathan's Famous",
-   "city": "Los Angeles",
-   "qloo_map": 0.16,
-   "llm": 0.5,
-   "room": 0.65
-  },
-  {
-   "name": "YG",
-   "city": "Nairobi",
-   "qloo_map": 0.69,
-   "llm": 0.35,
-   "room": 0.69
-  },
-  {
-   "name": "In-N-Out Burger",
-   "city": "Atlanta",
-   "qloo_map": 0.36,
-   "llm": 0.7,
-   "room": 0.75
-  },
-  {
-   "name": "Dallas Mavericks",
-   "city": "Nairobi",
-   "qloo_map": 0.49,
-   "llm": 0.15,
-   "room": 0.49
-  },
-  {
-   "name": "Texas Rangers",
-   "city": "Toronto",
-   "qloo_map": 0.16,
-   "llm": 0.5,
-   "room": 0.65
-  },
-  {
-   "name": "Waffle House",
-   "city": "New York",
-   "qloo_map": 0.36,
-   "llm": 0.7,
-   "room": 0.75
-  },
-  {
-   "name": "Asake",
-   "city": "New York",
-   "qloo_map": 0.69,
-   "llm": 0.35,
-   "room": 0.7
-  },
-  {
-   "name": "New York Mets",
-   "city": "Toronto",
-   "qloo_map": 0.33,
-   "llm": 0.65,
-   "room": 0.7
-  },
-  {
-   "name": "Nathan's Famous",
-   "city": "Atlanta",
-   "qloo_map": 0.13,
-   "llm": 0.45,
-   "room": 0.68
-  },
-  {
-   "name": "Gucci Mane",
-   "city": "Mumbai",
-   "qloo_map": 0.62,
-   "llm": 0.3,
-   "room": 0.62
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Nairobi",
-   "qloo_map": 0.19,
-   "llm": 0.5,
-   "room": 0.48
-  },
-  {
-   "name": "Torchy's Tacos",
-   "city": "Los Angeles",
-   "qloo_map": 0.51,
-   "llm": 0.2,
-   "room": 0.51
-  },
-  {
-   "name": "Toronto Raptors",
-   "city": "Lagos",
-   "qloo_map": 0.65,
-   "llm": 0.35,
-   "room": 0.65
-  },
-  {
-   "name": "Wu-Tang Clan",
-   "city": "Lagos",
-   "qloo_map": 0.2,
-   "llm": 0.5,
-   "room": 0.52
-  },
-  {
-   "name": "Stormzy",
-   "city": "Atlanta",
-   "qloo_map": 0.2,
-   "llm": 0.5,
-   "room": 0.4
-  }
- ],
- "dropped": [
-  "Chicken Republic",
-  "Tusker",
-  "Nyashinski",
-  "Parle-G"
- ],
  "cities": [
   "New York",
   "Los Angeles",
@@ -949,5 +11,762 @@
   "Nairobi",
   "Mumbai"
  ],
- "seconds": 323
+ "resolved": 54,
+ "coverage_gaps": [
+  "Big Brother Naija",
+  "Chicken Republic",
+  "Nviiri the Storyteller",
+  "Tusker",
+  "Nyashinski",
+  "Parle-G"
+ ],
+ "table": {
+  "all": {
+   "n": 54,
+   "qloo_cells": 0.889,
+   "qloo_taste": 0.889,
+   "llm": 1.0,
+   "room": 1.0
+  },
+  "clean": {
+   "n": 38,
+   "qloo_cells": 0.842,
+   "qloo_taste": 0.842,
+   "llm": 1.0,
+   "room": 1.0
+  },
+  "us_canada_uk": {
+   "n": 36,
+   "qloo_cells": 0.944,
+   "qloo_taste": 0.972,
+   "llm": 1.0,
+   "room": 1.0
+  },
+  "africa_india": {
+   "n": 18,
+   "qloo_cells": 0.778,
+   "qloo_taste": 0.722,
+   "llm": 1.0,
+   "room": 1.0
+  },
+  "clean_artists": {
+   "n": 17,
+   "qloo_cells": 0.706,
+   "qloo_taste": 0.706,
+   "llm": 1.0,
+   "room": 1.0
+  },
+  "clean_brands": {
+   "n": 16,
+   "qloo_cells": 1.0,
+   "qloo_taste": 1.0,
+   "llm": 1.0,
+   "room": 1.0
+  }
+ },
+ "rows": [
+  {
+   "name": "New York Knicks",
+   "type": "brand",
+   "home": "New York",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "New York",
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "New York Mets",
+   "type": "brand",
+   "home": "New York",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "New York",
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "Nathan's Famous",
+   "type": "brand",
+   "home": "New York",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "New York",
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "Wu-Tang Clan",
+   "type": "artist",
+   "home": "New York",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "New York",
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "A Boogie wit da Hoodie",
+   "type": "artist",
+   "home": "New York",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": null,
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "New York Rangers",
+   "type": "brand",
+   "home": "New York",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "New York",
+    "llm": "New York",
+    "room": "New York"
+   }
+  },
+  {
+   "name": "Los Angeles Dodgers",
+   "type": "brand",
+   "home": "Los Angeles",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "Los Angeles Clippers",
+   "type": "brand",
+   "home": "Los Angeles",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "El Pollo Loco",
+   "type": "brand",
+   "home": "Los Angeles",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "YG",
+   "type": "artist",
+   "home": "Los Angeles",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "Los Angeles Kings",
+   "type": "brand",
+   "home": "Los Angeles",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "In-N-Out Burger",
+   "type": "brand",
+   "home": "Los Angeles",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Los Angeles",
+    "llm": "Los Angeles",
+    "room": "Los Angeles"
+   }
+  },
+  {
+   "name": "Dallas Mavericks",
+   "type": "brand",
+   "home": "Dallas",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Dallas",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Texas Rangers",
+   "type": "brand",
+   "home": "Dallas",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Dallas",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Whataburger",
+   "type": "brand",
+   "home": "Dallas",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Dallas",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Torchy's Tacos",
+   "type": "brand",
+   "home": "Dallas",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Dallas",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Dallas Stars",
+   "type": "brand",
+   "home": "Dallas",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Dallas",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Leon Bridges",
+   "type": "artist",
+   "home": "Dallas",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Los Angeles",
+    "qloo_taste": "Dallas",
+    "llm": "Dallas",
+    "room": "Dallas"
+   }
+  },
+  {
+   "name": "Atlanta Hawks",
+   "type": "brand",
+   "home": "Atlanta",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Atlanta Braves",
+   "type": "brand",
+   "home": "Atlanta",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Zaxby's",
+   "type": "brand",
+   "home": "Atlanta",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Gucci Mane",
+   "type": "artist",
+   "home": "Atlanta",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Atlanta Falcons",
+   "type": "brand",
+   "home": "Atlanta",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Waffle House",
+   "type": "brand",
+   "home": "Atlanta",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Atlanta",
+    "qloo_taste": "Atlanta",
+    "llm": "Atlanta",
+    "room": "Atlanta"
+   }
+  },
+  {
+   "name": "Toronto Raptors",
+   "type": "brand",
+   "home": "Toronto",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Toronto",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "Toronto Maple Leafs",
+   "type": "brand",
+   "home": "Toronto",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Toronto",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "Tim Hortons",
+   "type": "brand",
+   "home": "Toronto",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Toronto",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "PartyNextDoor",
+   "type": "artist",
+   "home": "Toronto",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "Swiss Chalet",
+   "type": "brand",
+   "home": "Toronto",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Toronto",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "Toronto Blue Jays",
+   "type": "brand",
+   "home": "Toronto",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Toronto",
+    "qloo_taste": "Toronto",
+    "llm": "Toronto",
+    "room": "Toronto"
+   }
+  },
+  {
+   "name": "Greggs",
+   "type": "brand",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "EastEnders",
+   "type": "tv_show",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "Stormzy",
+   "type": "artist",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "Tottenham Hotspur F.C.",
+   "type": "brand",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "Pret A Manger",
+   "type": "brand",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "Coronation Street",
+   "type": "tv_show",
+   "home": "London",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "London",
+    "qloo_taste": "London",
+    "llm": "London",
+    "room": "London"
+   }
+  },
+  {
+   "name": "Kaizer Chiefs F.C.",
+   "type": "brand",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Johannesburg",
+    "qloo_taste": "Johannesburg",
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  },
+  {
+   "name": "Orlando Pirates F.C.",
+   "type": "brand",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Johannesburg",
+    "qloo_taste": "Johannesburg",
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  },
+  {
+   "name": "Kabza De Small",
+   "type": "artist",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Lagos",
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  },
+  {
+   "name": "DJ Maphorisa",
+   "type": "artist",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Johannesburg",
+    "qloo_taste": "Johannesburg",
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  },
+  {
+   "name": "Asake",
+   "type": "artist",
+   "home": "Lagos",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Lagos",
+    "llm": "Lagos",
+    "room": "Lagos"
+   }
+  },
+  {
+   "name": "Olamide",
+   "type": "artist",
+   "home": "Lagos",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Lagos",
+    "llm": "Lagos",
+    "room": "Lagos"
+   }
+  },
+  {
+   "name": "Wizkid",
+   "type": "artist",
+   "home": "Lagos",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Nairobi",
+    "llm": "Lagos",
+    "room": "Lagos"
+   }
+  },
+  {
+   "name": "King of Boys",
+   "type": "movie",
+   "home": "Lagos",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Lagos",
+    "llm": "Lagos",
+    "room": "Lagos"
+   }
+  },
+  {
+   "name": "Sauti Sol",
+   "type": "artist",
+   "home": "Nairobi",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Nairobi",
+    "qloo_taste": "Nairobi",
+    "llm": "Nairobi",
+    "room": "Nairobi"
+   }
+  },
+  {
+   "name": "Khaligraph Jones",
+   "type": "artist",
+   "home": "Nairobi",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Lagos",
+    "qloo_taste": "Lagos",
+    "llm": "Nairobi",
+    "room": "Nairobi"
+   }
+  },
+  {
+   "name": "Mumbai Indians",
+   "type": "brand",
+   "home": "Mumbai",
+   "giveaway": true,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Mumbai",
+    "qloo_taste": "Mumbai",
+    "llm": "Mumbai",
+    "room": "Mumbai"
+   }
+  },
+  {
+   "name": "Arijit Singh",
+   "type": "artist",
+   "home": "Mumbai",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Mumbai",
+    "qloo_taste": "Mumbai",
+    "llm": "Mumbai",
+    "room": "Mumbai"
+   }
+  },
+  {
+   "name": "Haldiram's",
+   "type": "brand",
+   "home": "Mumbai",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Mumbai",
+    "qloo_taste": "Mumbai",
+    "llm": "Mumbai",
+    "room": "Mumbai"
+   }
+  },
+  {
+   "name": "Taarak Mehta Ka Ooltah Chashmah",
+   "type": "tv_show",
+   "home": "Mumbai",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Mumbai",
+    "qloo_taste": "Mumbai",
+    "llm": "Mumbai",
+    "room": "Mumbai"
+   }
+  },
+  {
+   "name": "Badshah",
+   "type": "artist",
+   "home": "Mumbai",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Mumbai",
+    "qloo_taste": "Mumbai",
+    "llm": "Mumbai",
+    "room": "Mumbai"
+   }
+  },
+  {
+   "name": "Pick n Pay",
+   "type": "brand",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "Johannesburg",
+    "qloo_taste": "Johannesburg",
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  },
+  {
+   "name": "Bien",
+   "type": "artist",
+   "home": "Nairobi",
+   "giveaway": false,
+   "mode": "map",
+   "tops": {
+    "qloo_cells": "New York",
+    "qloo_taste": "Los Angeles",
+    "llm": "Nairobi",
+    "room": "Nairobi"
+   }
+  },
+  {
+   "name": "Skeem Saam",
+   "type": "tv_show",
+   "home": "Johannesburg",
+   "giveaway": false,
+   "mode": "memory",
+   "tops": {
+    "qloo_cells": null,
+    "qloo_taste": null,
+    "llm": "Johannesburg",
+    "room": "Johannesburg"
+   }
+  }
+ ],
+ "seconds": 133
 }

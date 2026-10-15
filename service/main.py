@@ -243,6 +243,10 @@ async def agent_cut(body: AgentCutIn, request: Request):
 
 # ---------- documents: PDF, PPTX, DOCX, TXT, MD in; the corrected file out ----------
 
+# Large decks unpack into a lot of memory; two document jobs at a time per instance.
+_doc_jobs = asyncio.Semaphore(2)
+
+
 async def _read_upload(file: UploadFile) -> bytes:
     data = await file.read(docs.MAX_BYTES + 1)
     if len(data) > docs.MAX_BYTES:
@@ -254,12 +258,16 @@ async def _read_upload(file: UploadFile) -> bytes:
 async def doc_parse(request: Request, file: UploadFile = File(...)):
     """Text blocks with stable ids. The browser joins them with blank lines and reads them like a script."""
     limit(request, 20)
-    return await asyncio.to_thread(docs.parse, file.filename or "upload.txt", await _read_upload(file))
+    data = await _read_upload(file)
+    async with _doc_jobs:
+        return await asyncio.to_thread(docs.parse, file.filename or "upload.txt", data)
 
 
 @app.post("/api/doc/export")
-async def doc_export(request: Request, file: UploadFile = File(...), changes: str = Form("[]")):
-    """The original file with the changed blocks rewritten. A PDF comes back as DOCX."""
+async def doc_export(request: Request, file: UploadFile = File(...), changes: str = Form("[]"),
+                     audience: str = Form("")):
+    """The original file with the changed blocks rewritten: tracked changes in Word, a change log in a
+    deck's speaker notes. A PDF comes back as a tracked Word document."""
     import json
     from urllib.parse import quote
 
@@ -268,7 +276,10 @@ async def doc_export(request: Request, file: UploadFile = File(...), changes: st
         edits = [c for c in json.loads(changes) if isinstance(c, dict)]
     except ValueError:
         raise HTTPException(400, "changes must be a JSON list of {id, text}")
-    name, out, media = await asyncio.to_thread(docs.export, file.filename or "upload.txt", await _read_upload(file), edits)
+    data = await _read_upload(file)
+    async with _doc_jobs:
+        name, out, media = await asyncio.to_thread(docs.export, file.filename or "upload.txt", data, edits[:400],
+                                                   audience[:60])
     return Response(out, media_type=media,
                     headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
 

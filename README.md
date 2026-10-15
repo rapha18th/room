@@ -17,19 +17,21 @@ Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Qloo
 5. **Verdict.** *Lands* (known and loved), *Roast* (known, kept at a distance), *Inside* (a slice of the room loves it), *Dies* (unknown), *Famous* (globally famous with a thin local fan base).
 6. **Swap.** For a weak city, Qloo returns what that audience has affinity for, by taste similarity and by shared tags. Gemini keeps the candidates that do the same job, rewrites the line, and Room scores each swap in the same room.
 
-## Benchmark: why Known and Loved come from different places
+## Benchmark: the Fame track
 
-[`benchmark/`](benchmark) holds 56 references with an unambiguous home city among ten (New York, Los Angeles, Dallas, Atlanta, Toronto, London, Johannesburg, Lagos, Nairobi, Mumbai): sports teams, regional chains, local TV and local artists. Each system names the city where the reference is best known.
+Qloo publishes affinity, a measure of how strongly an entity relates to an audience or a place, and advises comparing scores by rank. Its published numbers are client outcomes, so Room built a benchmark for the job it hands out: which city knows a name best.
 
-| System | Home city found | Home city called a blank |
-|---|---|---|
-| Qloo heatmap fan presence alone | 87.5% | 4 |
-| Gemini alone, from memory | 96.4% | 0 |
-| **Room: Gemini recognition, Qloo fan presence as a floor** | **94.6%** | **0** |
+[`benchmark/`](benchmark) holds 60 references with one home city among ten (New York, Los Angeles, Dallas, Atlanta, Toronto, London, Johannesburg, Lagos, Nairobi, Mumbai): sports teams, regional chains, local TV and local artists. Six that Qloo matches only loosely count as coverage gaps. The clean subset drops names that carry their home city, state or country.
 
-Gemini is strong on fame: it read the internet. Qloo's heatmaps measure where fans concentrate, which tracks taste more than awareness: Tim Hortons shows more fan cells in New York than in Toronto, and Waffle House reads thin in Dallas. Qloo also sees what memory misses. It finds Khaligraph Jones's fan base in Johannesburg and Lagos, and places Big Brother Naija in Lagos where Gemini guessed London. Room's two remaining misses are the same story: Kabza De Small and Khaligraph Jones show their densest fan base in Lagos.
+| Subset | n | Qloo fan presence | Qloo taste (median affinity) | Gemini alone | Room |
+|---|---|---|---|---|---|
+| All | 54 | 89% | 89% | 100% | **100%** |
+| Clean | 38 | 84% | 84% | 100% | **100%** |
+| Africa and India | 18 | 78% | 72% | 100% | **100%** |
+| Clean brands | 16 | 100% | 100% | 100% | **100%** |
+| Clean artists | 17 | 71% | 71% | 100% | **100%** |
 
-So Room asks Gemini who recognises a reference, lets Qloo raise that wherever it measures fans, and takes Loved, age, swaps and every rewrite from Qloo's taste graph. Rerun with `python benchmark/run.py`; full rows in [`benchmark/results.md`](benchmark/results.md).
+Qloo's map places every brand. Its misses are artists with thin records: several African artists share one cluster map that peaks in Lagos, and the signal per square kilometre in Lagos, Nairobi and Johannesburg runs at a quarter of New York's. So Room asks Gemini who recognises a name, lets Qloo raise that wherever a solid record shows a real fan base, and takes Loved, age, swaps, tours and every rewrite from Qloo's taste graph. Rerun with `python benchmark/run.py`; every row is in [`benchmark/results.md`](benchmark/results.md).
 
 ## Review: a spellchecker for culture
 
@@ -50,7 +52,18 @@ Give Room up to eight stops. It scores the set in every city, runs a review per 
 
 ## Files: decks and documents in, corrected files out
 
-Drop a PDF, PowerPoint (.pptx), Word (.docx), text or Markdown file anywhere on the page. Room reads slides, text boxes, tables and speaker notes, labels each block on the paper, and reviews it like any script. **Download** returns the same file with only the accepted changes written in: inside a paragraph only the changed words move, so a bold brand name stays bold and the rest of the line keeps its formatting. A PDF comes back as a Word document, since a PDF holds positioned glyphs rather than editable paragraphs. Libraries: python-pptx and python-docx (MIT), pypdf (BSD).
+Drop or paste a PDF, PowerPoint (.pptx), Word (.docx), text or Markdown file anywhere on the page. Room reads slides, text boxes, tables and speaker notes, labels each block on the paper, and reviews it like any script. **Download** returns the file with the accepted changes written in:
+
+- **Word** comes back with tracked changes by "Room", each with a comment carrying its reason. Accept All gives the corrected text; Reject All gives the original. A Room-edited file opens again in Room for another pass.
+- **PowerPoint** gets its edits in place, with only the changed words moving, so a bold brand name stays bold. Each touched slide gets a change log in its speaker notes.
+- **PDF** comes back as a tracked Word document, since a PDF holds positioned glyphs rather than editable paragraphs.
+- **Text and Markdown** keep their spacing and markup.
+
+Uploads stop at the door when they look hostile: zip bombs, macro payloads, password-locked PDFs, files over 12 MB or 60 pages. Libraries: python-pptx and python-docx (MIT), pypdf (BSD).
+
+## Keyboard and access
+
+Every control works from the keyboard and keeps focus through every update. In a review, <kbd>A</kbd> accepts, <kbd>I</kbd> ignores and <kbd>J</kbd> <kbd>K</kbd> move, while a review surface has focus; <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes any accepted edit, and <kbd>Cmd</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> opens every command. The inline suggestion card is a labelled dialog tethered to its word. Text meets WCAG AA contrast on the stage and the paper, motion follows the reduced-motion setting, and type runs on Apple's system faces where they exist and Inter with optical sizes everywhere else.
 
 ## Second opinion
 

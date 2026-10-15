@@ -33,7 +33,12 @@ export function applyLine(text, refs, refId, newLine, replacement = null, score 
   const at = locate(text, ref);
   if (at < 0) return null;
   let end = at + old.length;
-  if (!newLine) while (end < text.length && text[end] === " ") end++;
+  if (!newLine) {
+    while (end < text.length && text[end] === " ") end++;
+    // A whole line leaving from between two line breaks takes one break with it, so no blank line
+    // appears inside a paragraph (blank lines are what separate a file's paragraphs).
+    if (text[at - 1] === "\n" && text[end] === "\n") end++;
+  }
   const out = text.slice(0, at) + newLine + text.slice(end);
   const delta = newLine.length - (end - at);
   const next = [];

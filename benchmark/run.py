@@ -1,13 +1,18 @@
-"""Room against an LLM alone.
+"""The Fame track: which of ten cities is each reference best known in?
 
-Sixty references, each with one home city among ten. Both systems say how well-known each
-reference is in every city. A system scores a hit when its top city is the home city.
+56 references with one unambiguous home city each. This is the question Room hands to Gemini (who
+recognises a name), so the track measures Room's division of labour as much as any single system.
 
-  Room       one Qloo heatmap per reference over the ten cities; Known per city
-  LLM alone  Gemini's own estimate of Known per city, from the same model Room reads with
+Systems
+  qloo_cells   Qloo heatmap fan presence: cells in the city against a household name of the same type
+  qloo_taste   Qloo heatmap median affinity in the city, the measure Qloo documents
+  llm          Gemini alone, guessing from memory in batches
+  room         Room as shipped: Gemini recognition, raised by Qloo fan presence where the record is solid
 
-Also reported: how often each system calls the home city a place the reference dies (a miss
-that would mislead a writer), and how often it calls a reference known far from home.
+Reported on all references, on a clean subset (names that carry their home city, state or country are
+removed, since they hand any system the answer), and by region (US, Canada, UK against Africa and India,
+where Qloo holds roughly a quarter of the signal density). References Qloo cannot resolve with certainty
+are counted as coverage gaps, apart from accuracy.
 
 Usage: python benchmark/run.py   (needs QLOO_API_KEY and Vertex credentials, as for the service)
 """
@@ -15,7 +20,6 @@ Usage: python benchmark/run.py   (needs QLOO_API_KEY and Vertex credentials, as 
 import asyncio
 import json
 import os
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -35,6 +39,17 @@ import llm  # noqa: E402
 
 SPEC = json.loads((HERE / "references.json").read_text(encoding="utf-8"))
 CITIES = SPEC["cities"]
+SYSTEMS = ("qloo_cells", "qloo_taste", "llm", "room")
+NAMES = {"qloo_cells": "Qloo fan presence alone", "qloo_taste": "Qloo taste (median affinity) alone",
+         "llm": "Gemini alone, from memory", "room": "Room"}
+GIVEAWAY = {"New York": ["new york"], "Los Angeles": ["los angeles"], "Dallas": ["dallas", "texas"],
+            "Atlanta": ["atlanta"], "Toronto": ["toronto"], "London": ["london"], "Johannesburg": ["johannesburg"],
+            "Lagos": ["lagos", "naija"], "Nairobi": ["nairobi", "kenya"], "Mumbai": ["mumbai", "india"]}
+WESTERN = {"New York", "Los Angeles", "Dallas", "Atlanta", "Toronto", "London"}
+
+
+def giveaway(r) -> bool:
+    return any(w in r["name"].lower() for w in GIVEAWAY.get(r["home"], []))
 
 
 async def resolve_all():
@@ -53,8 +68,7 @@ async def room_scores(refs):
 
     async def one(r):
         async with sem:
-            s = await engine.score(r["match"], r["type"], CITIES)
-            return r["id"], s
+            return r["id"], await engine.score(r["match"], r["type"], CITIES)
 
     return dict(await asyncio.gather(*[one(r) for r in refs]))
 
@@ -68,73 +82,71 @@ async def llm_scores(refs):
     return out
 
 
-def top(known: dict):
-    return max(known, key=lambda c: known[c]) if known else None
+def top(values: dict):
+    vals = {c: v for c, v in values.items() if v is not None}
+    return max(vals, key=lambda c: vals[c]) if vals else None
 
 
-def summarise(refs, room, guess):
-    """Three systems, one question each: which of the ten cities is this reference's home?
-
-      qloo_map   Qloo heatmap fan presence alone (cells against a household name)
-      llm        Gemini alone, guessing from memory in one batch
-      room       Room as shipped: Gemini recognition with Qloo fan presence as a floor
-    """
-    systems = ("qloo_map", "llm", "room")
-    hits = {k: 0 for k in systems}
-    home_dead = {k: 0 for k in systems}
-    rows, disagree = [], []
-    for r in refs:
-        s = room[r["id"]]
-        cities = s["cities"]
-        qmap = {c: v["ratio"] for c, v in cities.items()} if s["mode"] == "map" else {}
-        roomk = {c: (v["known"], v["ratio"]) for c, v in cities.items()}
-        g = guess.get(r["id"], {})
-        llmk = {c: g.get(c, {}).get("known", 0.0) for c in CITIES}
-        tops = {"qloo_map": top(qmap), "llm": top(llmk),
-                "room": max(roomk, key=lambda c: roomk[c]) if roomk else None}
-        home_k = {"qloo_map": min(1, qmap.get(r["home"], 0)), "llm": llmk.get(r["home"], 0),
-                  "room": roomk.get(r["home"], (0, 0))[0]}
-        for k in systems:
-            hits[k] += tops[k] == r["home"]
-            home_dead[k] += home_k[k] < 0.15
-        for c in CITIES:
-            q, m = min(1, qmap.get(c, 0)), llmk.get(c, 0)
-            if (q >= 0.45) != (m >= 0.45) and abs(q - m) >= 0.3:
-                disagree.append({"name": r["name"], "city": c, "qloo_map": round(q, 2), "llm": round(m, 2),
-                                 "room": roomk.get(c, (None,))[0]})
-        rows.append({"name": r["name"], "home": r["home"], **{f"{k}_top": tops[k] for k in systems},
-                     "room_mode": s["mode"]})
-    n = len(refs)
+def tops_for(r, s, g):
+    rows = s["cities"]
+    mapped = s["mode"] == "map"
     return {
-        "n": n,
-        "top1": {k: round(v / n, 3) for k, v in hits.items()},
-        "home_called_dead": home_dead,
-        "rows": rows,
-        "disagreements": sorted(disagree, key=lambda d: -abs(d["qloo_map"] - d["llm"])),
+        "qloo_cells": top({c: v["ratio"] for c, v in rows.items()}) if mapped else None,
+        "qloo_taste": top({c: v["loved"] for c, v in rows.items()}) if mapped else None,
+        "llm": top({c: g.get(c, {}).get("known") for c in CITIES}),
+        "room": top({c: (v["known"], v["loved"] or 0) for c, v in rows.items()}),
     }
+
+
+def rate(rows, key):
+    if not rows:
+        return None
+    return round(sum(r["tops"][key] == r["home"] for r in rows) / len(rows), 3)
 
 
 async def main():
     t = time.time()
     refs, dropped = await resolve_all()
-    print(f"{len(refs)} resolved, dropped {len(dropped)}: {dropped}")
+    print(f"{len(refs)} resolved with certainty; coverage gaps: {dropped}")
     room = await room_scores(refs)
     guess = await llm_scores(refs)
-    result = summarise(refs, room, guess)
-    result["dropped"] = dropped
-    result["cities"] = CITIES
-    result["seconds"] = round(time.time() - t)
+
+    rows = []
+    for r in refs:
+        tops = tops_for(r, room[r["id"]], guess.get(r["id"], {}))
+        rows.append({"name": r["name"], "type": r["type"], "home": r["home"], "giveaway": giveaway(r),
+                     "mode": room[r["id"]]["mode"], "tops": tops})
+
+    subsets = {
+        "all": rows,
+        "clean": [x for x in rows if not x["giveaway"]],
+        "us_canada_uk": [x for x in rows if x["home"] in WESTERN],
+        "africa_india": [x for x in rows if x["home"] not in WESTERN],
+        "clean_artists": [x for x in rows if not x["giveaway"] and x["type"] == "artist"],
+        "clean_brands": [x for x in rows if not x["giveaway"] and x["type"] == "brand"],
+    }
+    table = {k: {"n": len(v), **{s: rate(v, s) for s in SYSTEMS}} for k, v in subsets.items()}
+    result = {"cities": CITIES, "resolved": len(refs), "coverage_gaps": dropped, "table": table,
+              "rows": rows, "seconds": round(time.time() - t)}
     (HERE / "results.json").write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")
 
-    t = result["top1"]
-    lines = [f"Home city found, {result['n']} references across {len(CITIES)} cities: "
-             f"Qloo map alone {t['qloo_map']:.0%} · Gemini alone {t['llm']:.0%} · Room {t['room']:.0%}", "",
-             "| Reference | Home | Qloo map alone | Gemini alone | Room |", "|---|---|---|---|---|"]
-    for r in result["rows"]:
-        mark = lambda x: f"**{x}**" if x == r["home"] else (x or "no map data")
-        lines.append(f"| {r['name']} | {r['home']} | {mark(r['qloo_map_top'])} | {mark(r['llm_top'])} | {mark(r['room_top'])} |")
+    pct = lambda v: "n/a" if v is None else f"{v:.0%}"
+    lines = [f"Fame track: home city found. {len(refs)} references resolved with certainty out of "
+             f"{len(SPEC['references'])}; coverage gaps: {', '.join(dropped) or 'none'}.", "",
+             "| Subset | n | " + " | ".join(NAMES[s] for s in SYSTEMS) + " |",
+             "|---|---|" + "---|" * len(SYSTEMS)]
+    for k, v in table.items():
+        lines.append(f"| {k.replace('_', ' ')} | {v['n']} | " + " | ".join(pct(v[s]) for s in SYSTEMS) + " |")
+    lines += ["", "| Reference | Home | " + " | ".join(NAMES[s] for s in SYSTEMS) + " |",
+              "|---|---|" + "---|" * len(SYSTEMS)]
+    for x in rows:
+        mark = lambda c: f"**{c}**" if c == x["home"] else (c or "no map")
+        lines.append(f"| {x['name']}{' *' if x['giveaway'] else ''} | {x['home']} | "
+                     + " | ".join(mark(x["tops"][s]) for s in SYSTEMS) + " |")
+    lines.append("")
+    lines.append("\\* name carries its home city, state or country; left out of the clean subset.")
     (HERE / "results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    print(json.dumps(table, indent=1))
 
 
 if __name__ == "__main__":

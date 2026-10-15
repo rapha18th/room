@@ -20,8 +20,11 @@ function draw() {
   shown = list.map((c) => ({ c, s: score(c.label, q) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).map((x) => x.c);
   at = Math.min(at, Math.max(0, shown.length - 1));
   $("paletteList").innerHTML = shown.map((c, i) =>
-    `<li role="option" data-i="${i}" aria-selected="${i === at}">${esc(c.label)}${c.hint ? `<small>${esc(c.hint)}</small>` : ""}</li>`).join("")
-    || `<li aria-disabled="true">Nothing matches</li>`;
+    `<li role="option" id="cmd-${i}" data-i="${i}" aria-selected="${i === at}">${esc(c.label)}${c.hint ? `<small>${esc(c.hint)}</small>` : ""}</li>`).join("")
+    || `<li role="option" aria-disabled="true">Nothing matches</li>`;
+  // Focus stays in the field; the screen reader follows the highlighted command.
+  if (shown.length) $("paletteInput").setAttribute("aria-activedescendant", `cmd-${at}`);
+  else $("paletteInput").removeAttribute("aria-activedescendant");
   $("paletteList").querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
 }
 

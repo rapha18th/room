@@ -13,6 +13,7 @@ import asyncio
 import difflib
 import re
 import statistics
+import unicodedata
 
 import llm
 from cache import cached, Cache
@@ -175,14 +176,39 @@ async def search(name: str, etype: str | None, take: int = 5) -> list[dict]:
     return await cached(Cache.key("search", name.lower(), etype, take), look)
 
 
+_STOP = {"the", "a", "an", "of", "and", "&", "fc", "f.c.", "f.c", "inc", "ltd", "co"}
+
+
+def _tokens(s: str) -> set[str]:
+    return {t for t in re.findall(r"[\w'.-]+", s.lower()) if t not in _STOP}
+
+
+def _plain(s: str) -> str:
+    # "Beyoncé" and "Beyonce", "’" and "'" compare as the same name.
+    s = unicodedata.normalize("NFKD", s or "").replace("’", "'").replace("‘", "'")
+    return "".join(ch for ch in s if not unicodedata.combining(ch)).casefold().strip()
+
+
 def match_quality(query: str, hit_name: str) -> float:
-    a, b = query.lower().strip(), (hit_name or "").lower().strip()
+    a, b = _plain(query), _plain(hit_name)
     if a == b:
         return 1.0
-    # "Arsenal" in "Arsenal F.C." is the same thing; "Republic" in "Chicken Republic" is something else.
+    ta, tb = _tokens(a), _tokens(b)
+    if ta and ta == tb:
+        return 0.95                       # "Arsenal" and "Arsenal F.C."
+    if ta and ta < tb and len(tb - ta) <= 1:
+        return 0.85                       # "In-N-Out" and "In-N-Out Burger"
+    if tb and tb < ta:
+        return MIN_MATCH - 0.01           # the hit drops a word the writer wrote: "Nviiri the Storyteller" is not "The Storyteller"
+    # "Republic" inside "Chicken Republic" is something else.
     if (a in b or b in a) and min(len(a), len(b)) / max(len(a), len(b)) >= 0.6:
         return 0.85
-    return difflib.SequenceMatcher(None, a, b).ratio()
+    q = difflib.SequenceMatcher(None, a, b).ratio()
+    # Spelling alone misleads on short names ("Tml Vibez" reads 0.82 against "Mo Vibez"):
+    # a match also has to share most of its words.
+    if ta and tb and len(ta & tb) / len(ta | tb) < 0.5:
+        q = min(q, MIN_MATCH - 0.01)
+    return q
 
 
 def _rank(name: str, hits: list[dict]) -> list[dict]:
@@ -228,19 +254,29 @@ async def profile(entity_id: str, cities: list[dict], age: str | None = None) ->
             else:
                 raise
         cells = ((body or {}).get("results") or {}).get("heatmap") or []
-        per: dict[str, list[float]] = {}
+        # Qloo documents three per-cell measures: affinity (against other entities in the cell),
+        # affinity_rank (against the entity itself across places) and popularity (signal density).
+        per: dict[str, dict[str, list[float]]] = {}
         for x in cells:
             loc, q = x.get("location") or {}, x.get("query") or {}
             owner = _owner(loc.get("latitude", 0), loc.get("longitude", 0), cities)
             if owner and q.get("affinity") is not None:
-                per.setdefault(owner, []).append(q["affinity"])
+                d = per.setdefault(owner, {"a": [], "r": [], "p": []})
+                d["a"].append(q["affinity"])
+                if q.get("affinity_rank") is not None:
+                    d["r"].append(q["affinity_rank"])
+                if q.get("popularity") is not None:
+                    d["p"].append(q["popularity"])
+        med = lambda v: round(statistics.median(v), 4) if v else None
         out = {}
         for c in cities:
-            v = per.get(c["name"], [])
+            d = per.get(c["name"], {"a": [], "r": [], "p": []})
             out[c["name"]] = {
-                "cells": len(v),
-                "median": round(statistics.median(v), 4) if v else None,
-                "p75": round(statistics.quantiles(v, n=4)[2], 4) if len(v) >= 4 else None,
+                "cells": len(d["a"]),
+                "median": med(d["a"]),
+                "p75": round(statistics.quantiles(d["a"], n=4)[2], 4) if len(d["a"]) >= 4 else None,
+                "rank": med(d["r"]),
+                "popularity": med(d["p"]),
             }
         return {"cities": out, "total": len(cells)}
 
@@ -317,6 +353,9 @@ async def score(entity: dict, etype: str, names: list[str], age: str | None = No
     out = {"entity_id": entity["entity_id"], "mode": "map" if mapped else "memory", "cities": {},
            "elsewhere": None, "age": age}
     pop = entity.get("popularity") or 0
+    # Thin artist records can share one cluster map with other artists (Kabza De Small, Khaligraph Jones,
+    # Asake and Wizkid share one that peaks in Lagos), so their fan presence only counts with real popularity.
+    floor = not (etype == "artist" and pop < 0.5)
 
     rows = {}
     for c in cities:
@@ -325,7 +364,10 @@ async def score(entity: dict, etype: str, names: list[str], age: str | None = No
         bcells = base["cities"][n]["cells"]
         presence = min(1.0, cells / max(bcells, 1))
         gk = recog.get(n)
-        known = max(gk, presence) if gk is not None else (presence if mapped else pop)
+        if gk is None:
+            known = presence if mapped else pop
+        else:
+            known = max(gk, presence) if floor else gk
         loved = None
         if mapped and cells >= 5:
             loved = aged["cities"][n]["median"] if aged else prof["cities"][n]["median"]
@@ -336,6 +378,7 @@ async def score(entity: dict, etype: str, names: list[str], age: str | None = No
             "recognition": round(gk, 2) if gk is not None else None,
             "presence": round(presence, 2),
             "ratio": round(cells / max(bcells, 1), 3),
+            "affinity_rank": prof["cities"][n].get("rank") if mapped else None,
             "loved": round(loved, 2) if loved is not None else None,
             "confidence": "low" if (bcells < THIN or not mapped) else "high",
             "why": VERDICTS[v],
@@ -344,7 +387,9 @@ async def score(entity: dict, etype: str, names: list[str], age: str | None = No
         }
     for n in wanted:
         out["cities"][n] = rows[n]
-    home = max(rows, key=lambda n: (rows[n]["ratio"], rows[n]["loved"] or 0))   # where the fans concentrate
+    # Where the fans concentrate: median affinity across the room's polygon. The cells ratio saturates
+    # and over-credits the data-dense New York and Los Angeles boxes.
+    home = max(rows, key=lambda n: (rows[n]["loved"] or 0, rows[n]["ratio"]))
     out["elsewhere"] = {"city": home, **rows[home]}
     return out
 
@@ -357,18 +402,27 @@ def _swap_tags(entity: dict) -> list[str]:
     return [t["id"] for t in sorted(tags, key=rank) if t.get("id")][:3]
 
 
+def _box(c: dict) -> str:
+    s, n = round(c["lat"] - c["hh"], 4), round(c["lat"] + c["hh"], 4)
+    w, e = round(c["lon"] - c["hw"], 4), round(c["lon"] + c["hw"], 4)
+    return f"POLYGON(({w} {s}, {e} {s}, {e} {n}, {w} {n}, {w} {s}))"
+
+
 async def swap_candidates(entity: dict, etype: str, city_name: str, exclude: set | None = None) -> list[dict]:
+    # The city's own box as the location signal: a name query resolves "New York" to the state
+    # and "Johannesburg" to a single ward.
     c = await city(city_name)
+    where = _box(c)
     ftype = TYPES[etype]
     tags = _swap_tags(entity)
     jobs = [qloo.get("/v2/insights", {
         "filter.type": ftype, "signal.interests.entities": entity["entity_id"],
-        "signal.location.query": c["name"], "filter.exclude.entities": entity["entity_id"], "take": 10,
+        "signal.location": where, "filter.exclude.entities": entity["entity_id"], "take": 10,
     })]
     if tags:
         jobs.append(qloo.get("/v2/insights", {
             "filter.type": ftype, "filter.tags": ",".join(tags),
-            "signal.location.query": c["name"], "filter.exclude.entities": entity["entity_id"], "take": 12,
+            "signal.location": where, "filter.exclude.entities": entity["entity_id"], "take": 12,
         }))
     seen, out = set(exclude or ()) | {entity["entity_id"]}, []
     for res in await asyncio.gather(*jobs, return_exceptions=True):
