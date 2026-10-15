@@ -31,6 +31,25 @@ The agent stops when the city clears 80% or the plan runs out, and reports what 
 
 On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (62% to 82%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
 
+## Second opinion
+
+A switch on the board flips every verdict between **Measured by Qloo** and **Gemini alone**, where Gemini guesses Known and Loved from memory with no Qloo data. Cells where the two disagree carry an outline, and hovering one shows the other's call. On the stand-up sample, Gemini says Crocs lands in every city; Qloo measures a roast in three of the four.
+
+## Room as an MCP server
+
+Any MCP client can read the room mid-task. The endpoint is `https://sozoroom.web.app/mcp` (streamable HTTP, no sign-in).
+
+```bash
+claude mcp add --transport http room https://sozoroom.web.app/mcp
+```
+
+| Tool | Does |
+|---|---|
+| `read_room(text, cities, age?)` | Every reference in a text, scored per city, with a room score per city |
+| `score_reference(name, kind, cities, age?)` | One reference across up to four cities |
+| `find_swap(line, reference, kind, city, job_in_line?)` | Local equivalents that keep the reference's job, each scored |
+| `rewrite_for_city(text, city, also_check?, max_swaps?)` | The rewrite agent, run on the server, with its trace |
+
 ## Qloo endpoints
 
 | Endpoint | Use |
