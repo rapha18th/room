@@ -22,3 +22,5 @@ spike/docs_bench.py
 spike/docs_office_check.py
 spike/docs_proto.py
 web/_t.*
+benchmark/taste/data/*_stub.json
+benchmark/taste/data/*_incomplete.json

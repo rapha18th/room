@@ -1,0 +1,326 @@
+[
+ {
+  "group": "us",
+  "city": "Atlanta",
+  "preset": "Atlanta",
+  "lat": 33.75,
+  "lon": -84.39,
+  "half_h": 0.2,
+  "half_w": 0.22
+ },
+ {
+  "group": "us",
+  "city": "Austin",
+  "preset": "Austin",
+  "lat": 30.27,
+  "lon": -97.74,
+  "half_h": 0.15,
+  "half_w": 0.18
+ },
+ {
+  "group": "us",
+  "city": "Chicago",
+  "preset": "Chicago",
+  "lat": 41.85,
+  "lon": -87.7,
+  "half_h": 0.22,
+  "half_w": 0.2
+ },
+ {
+  "group": "us",
+  "city": "Dallas",
+  "preset": "Dallas",
+  "lat": 32.78,
+  "lon": -96.8,
+  "half_h": 0.22,
+  "half_w": 0.25
+ },
+ {
+  "group": "us",
+  "city": "Denver",
+  "preset": "Denver",
+  "lat": 39.74,
+  "lon": -104.99,
+  "half_h": 0.15,
+  "half_w": 0.18
+ },
+ {
+  "group": "us",
+  "city": "Detroit",
+  "preset": "Detroit",
+  "lat": 42.36,
+  "lon": -83.1,
+  "half_h": 0.15,
+  "half_w": 0.2
+ },
+ {
+  "group": "us",
+  "city": "Honolulu",
+  "preset": "Honolulu",
+  "lat": 21.33,
+  "lon": -157.85,
+  "half_h": 0.08,
+  "half_w": 0.12
+ },
+ {
+  "group": "us",
+  "city": "Houston",
+  "preset": "Houston",
+  "lat": 29.76,
+  "lon": -95.37,
+  "half_h": 0.25,
+  "half_w": 0.28
+ },
+ {
+  "group": "us",
+  "city": "Los Angeles",
+  "preset": "Los Angeles",
+  "lat": 34.05,
+  "lon": -118.3,
+  "half_h": 0.25,
+  "half_w": 0.3
+ },
+ {
+  "group": "us",
+  "city": "Miami",
+  "preset": "Miami",
+  "lat": 25.78,
+  "lon": -80.21,
+  "half_h": 0.18,
+  "half_w": 0.15
+ },
+ {
+  "group": "us",
+  "city": "Nashville",
+  "preset": "Nashville",
+  "lat": 36.16,
+  "lon": -86.78,
+  "half_h": 0.15,
+  "half_w": 0.18
+ },
+ {
+  "group": "us",
+  "city": "New York City",
+  "preset": "New York",
+  "lat": 40.71,
+  "lon": -73.97,
+  "half_h": 0.22,
+  "half_w": 0.25
+ },
+ {
+  "group": "us",
+  "city": "San Francisco",
+  "preset": "San Francisco",
+  "lat": 37.75,
+  "lon": -122.35,
+  "half_h": 0.15,
+  "half_w": 0.15
+ },
+ {
+  "group": "us",
+  "city": "Seattle",
+  "preset": "Seattle",
+  "lat": 47.61,
+  "lon": -122.33,
+  "half_h": 0.15,
+  "half_w": 0.15
+ },
+ {
+  "group": "us",
+  "city": "Washington D.C.",
+  "preset": "Washington D.C.",
+  "lat": 38.9,
+  "lon": -77.03,
+  "half_h": 0.15,
+  "half_w": 0.18
+ },
+ {
+  "group": "gb",
+  "city": "Birmingham",
+  "preset": "Birmingham",
+  "lat": 52.48,
+  "lon": -1.9,
+  "half_h": 0.12,
+  "half_w": 0.18
+ },
+ {
+  "group": "gb",
+  "city": "Glasgow",
+  "preset": "Glasgow",
+  "lat": 55.86,
+  "lon": -4.25,
+  "half_h": 0.1,
+  "half_w": 0.18
+ },
+ {
+  "group": "gb",
+  "city": "Liverpool",
+  "preset": "Liverpool",
+  "lat": 53.41,
+  "lon": -2.95,
+  "half_h": 0.1,
+  "half_w": 0.12
+ },
+ {
+  "group": "gb",
+  "city": "London",
+  "preset": "London",
+  "lat": 51.51,
+  "lon": -0.12,
+  "half_h": 0.2,
+  "half_w": 0.3
+ },
+ {
+  "group": "gb",
+  "city": "Manchester",
+  "preset": "Manchester",
+  "lat": 53.48,
+  "lon": -2.24,
+  "half_h": 0.12,
+  "half_w": 0.15
+ },
+ {
+  "group": "ca",
+  "city": "Calgary",
+  "preset": "Calgary",
+  "lat": 51.05,
+  "lon": -114.07,
+  "half_h": 0.15,
+  "half_w": 0.2
+ },
+ {
+  "group": "ca",
+  "city": "Edmonton",
+  "preset": "Edmonton",
+  "lat": 53.55,
+  "lon": -113.49,
+  "half_h": 0.15,
+  "half_w": 0.2
+ },
+ {
+  "group": "ca",
+  "city": "Ottawa",
+  "preset": "Ottawa",
+  "lat": 45.4,
+  "lon": -75.7,
+  "half_h": 0.15,
+  "half_w": 0.2
+ },
+ {
+  "group": "ca",
+  "city": "Toronto",
+  "preset": "Toronto",
+  "lat": 43.7,
+  "lon": -79.4,
+  "half_h": 0.18,
+  "half_w": 0.25
+ },
+ {
+  "group": "ca",
+  "city": "Vancouver",
+  "preset": "Vancouver",
+  "lat": 49.25,
+  "lon": -123.05,
+  "half_h": 0.15,
+  "half_w": 0.25
+ },
+ {
+  "group": "ca",
+  "city": "Winnipeg",
+  "preset": "Winnipeg",
+  "lat": 49.88,
+  "lon": -97.14,
+  "half_h": 0.12,
+  "half_w": 0.18
+ },
+ {
+  "group": "za",
+  "city": "Cape Town",
+  "preset": "Cape Town",
+  "lat": -33.93,
+  "lon": 18.47,
+  "half_h": 0.15,
+  "half_w": 0.15
+ },
+ {
+  "group": "za",
+  "city": "Durban",
+  "preset": "Durban",
+  "lat": -29.86,
+  "lon": 31.0,
+  "half_h": 0.15,
+  "half_w": 0.15
+ },
+ {
+  "group": "za",
+  "city": "Johannesburg",
+  "preset": "Johannesburg",
+  "lat": -26.17,
+  "lon": 28.04,
+  "half_h": 0.2,
+  "half_w": 0.22
+ },
+ {
+  "group": "in",
+  "city": "Bengaluru",
+  "preset": "Bengaluru",
+  "lat": 12.97,
+  "lon": 77.59,
+  "half_h": 0.15,
+  "half_w": 0.15
+ },
+ {
+  "group": "in",
+  "city": "Delhi",
+  "preset": "Delhi",
+  "lat": 28.62,
+  "lon": 77.2,
+  "half_h": 0.2,
+  "half_w": 0.22
+ },
+ {
+  "group": "in",
+  "city": "Mumbai",
+  "preset": "Mumbai",
+  "lat": 19.08,
+  "lon": 72.88,
+  "half_h": 0.18,
+  "half_w": 0.12
+ },
+ {
+  "group": "africa",
+  "city": "Accra",
+  "preset": "Accra",
+  "lat": 5.6,
+  "lon": -0.19,
+  "half_h": 0.12,
+  "half_w": 0.15
+ },
+ {
+  "group": "africa",
+  "city": "Johannesburg",
+  "preset": "Johannesburg",
+  "lat": -26.17,
+  "lon": 28.04,
+  "half_h": 0.2,
+  "half_w": 0.22
+ },
+ {
+  "group": "africa",
+  "city": "Lagos",
+  "preset": "Lagos",
+  "lat": 6.53,
+  "lon": 3.38,
+  "half_h": 0.15,
+  "half_w": 0.25
+ },
+ {
+  "group": "africa",
+  "city": "Nairobi",
+  "preset": "Nairobi",
+  "lat": -1.29,
+  "lon": 36.82,
+  "half_h": 0.12,
+  "half_w": 0.14
+ }
+]

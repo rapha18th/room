@@ -72,6 +72,26 @@ PRESET = {
     "Paris": (48.86, 2.35, 0.15, 0.20),
     "Mumbai": (19.08, 72.88, 0.18, 0.12),
     "Sydney": (-33.87, 151.10, 0.25, 0.25),
+    # Every city with an Apple Music city chart in the Taste track, so a name never resolves to a namesake.
+    "Austin": (30.27, -97.74, 0.15, 0.18),
+    "Denver": (39.74, -104.99, 0.15, 0.18),
+    "Detroit": (42.36, -83.10, 0.15, 0.20),
+    "Honolulu": (21.33, -157.85, 0.08, 0.12),
+    "Nashville": (36.16, -86.78, 0.15, 0.18),
+    "San Francisco": (37.75, -122.35, 0.15, 0.15),
+    "Seattle": (47.61, -122.33, 0.15, 0.15),
+    "Washington D.C.": (38.90, -77.03, 0.15, 0.18),
+    "Birmingham": (52.48, -1.90, 0.12, 0.18),
+    "Glasgow": (55.86, -4.25, 0.10, 0.18),
+    "Liverpool": (53.41, -2.95, 0.10, 0.12),
+    "Vancouver": (49.25, -123.05, 0.15, 0.25),
+    "Calgary": (51.05, -114.07, 0.15, 0.20),
+    "Edmonton": (53.55, -113.49, 0.15, 0.20),
+    "Ottawa": (45.40, -75.70, 0.15, 0.20),
+    "Winnipeg": (49.88, -97.14, 0.12, 0.18),
+    "Durban": (-29.86, 31.00, 0.15, 0.15),
+    "Delhi": (28.62, 77.20, 0.20, 0.22),
+    "Bengaluru": (12.97, 77.59, 0.15, 0.15),
 }
 
 AGES = ["24_and_younger", "25_to_29", "30_to_34", "35_to_44", "45_to_54", "55_and_older"]
@@ -222,7 +242,19 @@ async def resolve(name: str, etype: str) -> dict:
     if typed:
         ranked = _rank(name, typed)
         q = match_quality(name, ranked[0]["name"])
-        return {"match": ranked[0], "candidates": ranked[:5], "certain": q >= 0.8, "quality": round(q, 2)}
+        if q >= 0.8 or etype != "artist":
+            return {"match": ranked[0], "candidates": ranked[:5], "certain": q >= 0.8, "quality": round(q, 2)}
+    if etype == "artist":
+        # Qloo's hackathon data files many current musicians as person records only (DJ Zinhle, Arjan Dhillon).
+        # A person record with the same name stands in when no artist record matches with certainty. Person records
+        # hold politicians and athletes too, so the name has to match outright (0.95: exact or the same words).
+        people = [h for h in await search(name, "person") if match_quality(name, h["name"]) >= 0.95]
+        if people:
+            p = _rank(name, people)[0]
+            return {"match": {**p, "record": "person"}, "candidates": _rank(name, people)[:5], "certain": True,
+                    "quality": round(match_quality(name, p["name"]), 2)}
+        if typed:
+            return {"match": ranked[0], "candidates": ranked[:5], "certain": False, "quality": round(q, 2)}
     loose = _rank(name, await search(name, None))
     same = [h for h in loose if h.get("type") == etype and match_quality(name, h["name"]) >= MIN_MATCH]
     if same:
@@ -254,33 +286,38 @@ async def profile(entity_id: str, cities: list[dict], age: str | None = None) ->
             else:
                 raise
         cells = ((body or {}).get("results") or {}).get("heatmap") or []
-        # Qloo documents three per-cell measures: affinity (against other entities in the cell),
-        # affinity_rank (against the entity itself across places) and popularity (signal density).
-        per: dict[str, dict[str, list[float]]] = {}
-        for x in cells:
-            loc, q = x.get("location") or {}, x.get("query") or {}
-            owner = _owner(loc.get("latitude", 0), loc.get("longitude", 0), cities)
-            if owner and q.get("affinity") is not None:
-                d = per.setdefault(owner, {"a": [], "r": [], "p": []})
-                d["a"].append(q["affinity"])
-                if q.get("affinity_rank") is not None:
-                    d["r"].append(q["affinity_rank"])
-                if q.get("popularity") is not None:
-                    d["p"].append(q["popularity"])
-        med = lambda v: round(statistics.median(v), 4) if v else None
-        out = {}
-        for c in cities:
-            d = per.get(c["name"], {"a": [], "r": [], "p": []})
-            out[c["name"]] = {
-                "cells": len(d["a"]),
-                "median": med(d["a"]),
-                "p75": round(statistics.quantiles(d["a"], n=4)[2], 4) if len(d["a"]) >= 4 else None,
-                "rank": med(d["r"]),
-                "popularity": med(d["p"]),
-            }
-        return {"cities": out, "total": len(cells)}
+        return aggregate(cells, cities)
 
     return await cached(Cache.key("profile", entity_id, poly, age), run)
+
+
+def aggregate(cells: list, cities: list[dict]) -> dict:
+    """Per-city cells, median affinity (Loved), p75, median affinity_rank and popularity, from raw heatmap cells.
+    Qloo documents three per-cell measures: affinity (against other entities in the cell),
+    affinity_rank (against the entity itself across places) and popularity (signal density)."""
+    per: dict[str, dict[str, list[float]]] = {}
+    for x in cells:
+        loc, q = x.get("location") or {}, x.get("query") or {}
+        owner = _owner(loc.get("latitude", 0), loc.get("longitude", 0), cities)
+        if owner and q.get("affinity") is not None:
+            d = per.setdefault(owner, {"a": [], "r": [], "p": []})
+            d["a"].append(q["affinity"])
+            if q.get("affinity_rank") is not None:
+                d["r"].append(q["affinity_rank"])
+            if q.get("popularity") is not None:
+                d["p"].append(q["popularity"])
+    med = lambda v: round(statistics.median(v), 4) if v else None
+    out = {}
+    for c in cities:
+        d = per.get(c["name"], {"a": [], "r": [], "p": []})
+        out[c["name"]] = {
+            "cells": len(d["a"]),
+            "median": med(d["a"]),
+            "p75": round(statistics.quantiles(d["a"], n=4)[2], 4) if len(d["a"]) >= 4 else None,
+            "rank": med(d["r"]),
+            "popularity": med(d["p"]),
+        }
+    return {"cities": out, "total": len(cells)}
 
 
 async def baseline_id(etype: str) -> str:

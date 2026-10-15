@@ -1,0 +1,83 @@
+{
+ "snapshot": "dev",
+ "method": "two independent Claude reviewers, blind to every system output; a name is composer-only when both say so",
+ "composer_only": [
+  "Amitabh Bhattacharya",
+  "Avvy Sra",
+  "Garvit - Priyansh",
+  "Gur Sidhu",
+  "Ikky",
+  "Irshad Kamil",
+  "Kaptaan",
+  "Karthik Netha",
+  "Kasarla Shyam",
+  "MXRCI",
+  "Mithoon",
+  "Pritam",
+  "Prodbysoundscape",
+  "RXTRO",
+  "Sachin-Jigar",
+  "Shashwat Sachdev",
+  "Starboy X",
+  "Super Subu",
+  "Vishal & Shekhar",
+  "Vivek"
+ ],
+ "disagreements": [
+  {
+   "name": "ARJN",
+   "A": "unsure",
+   "B": "performer"
+  },
+  {
+   "name": "Garvit Soni",
+   "A": "performer",
+   "B": "unsure"
+  },
+  {
+   "name": "HEISENBERG",
+   "A": "composer_only",
+   "B": "unsure"
+  },
+  {
+   "name": "Heisenberg",
+   "A": "composer_only",
+   "B": "unsure"
+  },
+  {
+   "name": "KK Nagar Gana Jeeva",
+   "A": "composer_only",
+   "B": "performer"
+  },
+  {
+   "name": "M.S Krsna",
+   "A": "performer",
+   "B": "unsure"
+  },
+  {
+   "name": "Miki Malang",
+   "A": "performer",
+   "B": "unsure"
+  },
+  {
+   "name": "Priyansh Srivastava",
+   "A": "performer",
+   "B": "unsure"
+  },
+  {
+   "name": "Rokesh",
+   "A": "composer_only",
+   "B": "performer"
+  },
+  {
+   "name": "Saurav Srisan",
+   "A": "unsure",
+   "B": "composer_only"
+  },
+  {
+   "name": "Sickboi",
+   "A": "unsure",
+   "B": "composer_only"
+  }
+ ]
+}
