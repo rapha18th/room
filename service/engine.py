@@ -184,6 +184,7 @@ def match_quality(query: str, hit_name: str) -> float:
 
 async def resolve(name: str, etype: str) -> dict:
     hits = await search(name, etype)
+    typed = bool(hits)
     if not hits:
         hits = await search(name, None)
     if not hits:
@@ -191,7 +192,9 @@ async def resolve(name: str, etype: str) -> dict:
     ranked = sorted(hits, key=lambda h: (-match_quality(name, h["name"]), -(h.get("popularity") or 0)))
     best = ranked[0]
     q = match_quality(name, best["name"])
-    return {"match": best, "candidates": ranked[:5], "certain": q >= 0.8, "quality": round(q, 2)}
+    # A chain that only resolves to one venue (Wetherspoons -> a pub in Yate) scores at the wrong scale.
+    certain = q >= 0.8 and typed and best.get("type") == etype
+    return {"match": best, "candidates": ranked[:5], "certain": certain, "quality": round(q, 2)}
 
 
 # ---------- heatmap profile ----------

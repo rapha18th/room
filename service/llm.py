@@ -68,7 +68,7 @@ async def generate(prompt: str, schema, temperature: float, model: str = MODEL, 
 class Ref(BaseModel):
     surface: str = Field(description="The reference exactly as written in the text, character for character")
     name: str = Field(description="Canonical name to search for, e.g. 'In-N-Out Burger' for 'In-N-Out'")
-    type: str = Field(description="artist, book, brand, destination, movie, person, place, podcast, tv_show, videogame, or other")
+    type: str = Field(description="artist, book, brand, destination, movie, person, place, podcast, tv_show, videogame, or other. Sports teams, clubs and leagues are brand. Chains are brand; place is one named venue.")
     role: str = Field(description="3 to 8 words on the job the reference does in its line, e.g. 'cheap 3am chaos', 'symbol of giving up'")
 
 
@@ -79,7 +79,8 @@ class Refs(BaseModel):
 EXTRACT = """You read scripts for a comedian, writer or marketer before they face an audience.
 List every cultural reference in the text: brands, chains, musicians, bands, celebrities, public figures,
 films, TV shows, books, podcasts, video games, named venues and restaurants, and travel destinations.
-Also list foods, sports teams, slang, memes and events, with type "other".
+Sports teams, clubs and leagues count as brands, and so do restaurant and pub chains.
+Also list foods, slang, memes, holidays and events, with type "other".
 Skip the cities themselves when they only say where something happens.
 Each distinct reference once, in order of first appearance. Copy "surface" exactly from the text.
 

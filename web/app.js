@@ -14,7 +14,7 @@ const LEGEND = {
   inside: "A slice of the room knows it. The ones who do, love it.",
   dies: "A blank for most of the room.",
   famous: "Famous everywhere, with a thin fan base here. Expect recognition and little love.",
-  outside: "Foods, teams, slang and events sit outside Qloo's graph. Room leaves them unscored.",
+  outside: "Foods, slang, holidays and events sit outside Qloo's graph. Room leaves them unscored.",
 };
 
 const SAMPLES = [

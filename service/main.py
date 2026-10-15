@@ -23,6 +23,7 @@ app = FastAPI(title="Room")
 
 MAX_TEXT = 6000
 MAX_CITIES = 4
+READ_VERSION = 2  # bump when the extraction prompt changes
 
 # ---------- light per-IP limiter: the demo spends a shared key ----------
 _hits: dict[str, list[float]] = {}
@@ -63,7 +64,7 @@ class ReadIn(BaseModel):
 async def read(body: ReadIn, request: Request):
     """Pull references out of the text and match each to a Qloo entity."""
     limit(request, 12)
-    hit = await cache.get(Cache.key("read", body.text, llm.MODEL))
+    hit = await cache.get(Cache.key("read", body.text, llm.MODEL, READ_VERSION))
     if hit:
         return hit
     refs = await llm.extract(body.text)
@@ -79,7 +80,7 @@ async def read(body: ReadIn, request: Request):
         r["id"] = f"r{i}"
     result = {"references": out}
     if out:
-        await cache.set(Cache.key("read", body.text, llm.MODEL), result)
+        await cache.set(Cache.key("read", body.text, llm.MODEL, READ_VERSION), result)
     return result
 
 
