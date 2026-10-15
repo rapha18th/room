@@ -23,7 +23,7 @@ server = MCPServer(
         "Room checks cultural references (brands, artists, shows, films, people, places, teams) against a "
         "live audience in specific cities, using Qloo's taste graph. Use read_room on a draft before it goes "
         "to an audience, score_reference for a single name, find_swap when a reference dies in a city, and "
-        "rewrite_for_city to let Room's agent tune a whole script for one city. Cities are plain names such as "
+        "rewrite_for_city to let Room's agent tune a whole script for one city (it swaps, drops or keeps each weak reference). Cities are plain names such as "
         "'Atlanta' or 'Lagos'; up to four per call. Age bands: 24_and_younger, 25_to_29, 30_to_34, 35_to_44, "
         "45_to_54, 55_and_older (comma-separate to combine)."
     ),
@@ -125,18 +125,23 @@ async def rewrite_for_city(text: str, city: str, also_check: list[str] | None = 
     trace = list(p["trace"])
     swaps = 0
     for step in p["plan"]:
-        if step["action"] != "swap" or swaps >= max(1, min(max_swaps, 4)):
+        if step["action"] == "keep" or swaps >= max(1, min(max_swaps, 6)):
             continue
         ref = next((r for r in refs if r["id"] == step["ref_id"]), None)
         if not ref:
             continue
-        f = await agent.find(ref, city, [r["match"]["entity_id"] for r in refs if r.get("match")])
-        trace += f["trace"]
-        if not f["picks"]:
-            continue
-        t = await agent.test(text, refs, ref["id"], f["picks"], city, cities, None)
-        trace += t["trace"]
-        if t["applied"]:
+        t = None
+        if step["action"] == "swap":
+            f = await agent.find(ref, city, [r["match"]["entity_id"] for r in refs if r.get("match")])
+            trace += f["trace"]
+            if f["picks"]:
+                t = await agent.test(text, refs, ref["id"], f["picks"], city, cities, None)
+                trace += t["trace"]
+        swap_failed = step["action"] == "swap" and not (t and t["applied"])
+        if step["action"] == "drop" or (swap_failed and agent.verdict_of(ref, city) == "dies"):
+            t = await agent.cut(text, refs, ref["id"], city)
+            trace += t["trace"]
+        if t and t["applied"]:
             text, refs, swaps = t["text"], t["refs"], swaps + 1
         if (agent.room_score(refs, city) or 0) >= agent.TARGET:
             break

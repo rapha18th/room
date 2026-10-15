@@ -51,8 +51,9 @@ class _McpSlash:
 
 app.add_middleware(_McpSlash)
 
-MAX_TEXT = 6000
-MAX_CITIES = 4
+MAX_TEXT = 40000  # long enough for a deck or a short document
+MAX_REFS = 60
+MAX_CITIES = 8  # a room shows up to 4 cities; a tour runs up to 8 stops
 READ_VERSION = 5  # bump when the extraction prompt changes
 
 # ---------- light per-IP limiter: the demo spends a shared key ----------
@@ -105,7 +106,7 @@ async def read(body: ReadIn, request: Request):
         m = await engine.resolve(r["name"], r["type"])
         return {**r, **m, "outside": False}
 
-    out = await asyncio.gather(*[match(r) for r in refs[:30]])
+    out = await asyncio.gather(*[match(r) for r in refs[:MAX_REFS]])
     for i, r in enumerate(out):
         r["id"] = f"r{i}"
     result = {"references": out}
@@ -161,7 +162,7 @@ async def swap(body: SwapIn, request: Request):
 # ---------- second opinion: Gemini alone, with no Qloo data ----------
 
 class GuessIn(BaseModel):
-    refs: list[dict] = Field(max_length=30)
+    refs: list[dict] = Field(max_length=MAX_REFS)
     cities: list[str] = Field(min_length=1, max_length=MAX_CITIES)
     age: str | None = None
 
@@ -184,7 +185,7 @@ async def guess(body: GuessIn, request: Request):
 
 class AgentPlanIn(BaseModel):
     text: str = Field(max_length=MAX_TEXT)
-    refs: list[dict] = Field(max_length=30)
+    refs: list[dict] = Field(max_length=MAX_REFS)
     city: str
 
 
@@ -202,25 +203,41 @@ class AgentFindIn(BaseModel):
 
 @app.post("/api/agent/find")
 async def agent_find(body: AgentFindIn, request: Request):
-    limit(request, 30)
+    limit(request, 120)
     return await agent.find(body.ref, body.city, body.exclude)
 
 
 class AgentTestIn(BaseModel):
     text: str = Field(max_length=MAX_TEXT)
-    refs: list[dict] = Field(max_length=30)
+    refs: list[dict] = Field(max_length=MAX_REFS)
     ref_id: str
     picks: list[dict] = Field(max_length=3)
     city: str
     cities: list[str] = Field(min_length=1, max_length=MAX_CITIES)
     age: str | None = None
+    apply: bool = True
 
 
 @app.post("/api/agent/test")
 async def agent_test(body: AgentTestIn, request: Request):
-    limit(request, 30)
+    limit(request, 120)
     check_age(body.age)
-    return await agent.test(body.text, body.refs, body.ref_id, body.picks, body.city, body.cities, body.age)
+    return await agent.test(body.text, body.refs, body.ref_id, body.picks, body.city, body.cities, body.age,
+                            body.apply)
+
+
+class AgentCutIn(BaseModel):
+    text: str = Field(max_length=MAX_TEXT)
+    refs: list[dict] = Field(max_length=MAX_REFS)
+    ref_id: str
+    city: str
+    apply: bool = True
+
+
+@app.post("/api/agent/cut")
+async def agent_cut(body: AgentCutIn, request: Request):
+    limit(request, 60)
+    return await agent.cut(body.text, body.refs, body.ref_id, body.city, body.apply)
 
 
 @app.get("/api/search")

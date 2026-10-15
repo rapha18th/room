@@ -203,3 +203,29 @@ async def guess_room(refs: list[dict], cities: list[str], age: str | None = None
                 named[want] = {"known": max(0.0, min(1.0, c.known)), "loved": max(0.0, min(1.0, c.loved))}
         out[g.id] = named
     return out
+
+
+# ---------- drop: cut a reference and keep the line ----------
+
+class Cut(BaseModel):
+    line: str = Field(description="The line rewritten without the reference, same voice and rhythm; empty if the whole line should go")
+    why: str = Field(description="One short sentence the writer will read")
+
+
+CUT = """A writer is cutting a reference that will fall flat with an audience in {city}.
+
+LINE: {sentence}
+REFERENCE TO CUT: {surface}
+ITS JOB IN THE LINE: {role}
+
+Rewrite the line without the reference. Keep the voice, the rhythm and the point, and change as little
+as possible. If the line exists only for that reference, return an empty line so the whole line goes.
+"""
+
+
+async def cut_line(sentence: str, surface: str, role: str, city: str) -> dict:
+    parsed = await generate(CUT.format(city=city, sentence=sentence, surface=surface, role=role or "unknown"),
+                            Cut, 0.3, SWAP_MODEL, head_start=12.0)
+    if not parsed:
+        return {"line": sentence, "why": ""}
+    return {"line": parsed.line.strip(), "why": parsed.why}
