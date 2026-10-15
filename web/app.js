@@ -279,7 +279,7 @@ function cell(ref, city) {
   const low = state.lens === "qloo" && scoreOf(ref)?.cities?.[city]?.confidence === "low";
   const other = state.lens === "gemini" ? measuredVerdict(ref, city) : guessVerdict(ref, city);
   const differs = other && other !== v && !["outside", "unscored"].includes(v);
-  const tip = differs ? `${state.lens === "gemini" ? "Qloo measures" : "Gemini guesses"}: ${WORD[other]}` : (LEGEND[v] || "");
+  const tip = differs ? `${state.lens === "gemini" ? "Room says" : "Gemini alone says"}: ${WORD[other]}` : (LEGEND[v] || "");
   return `<span class="cell v-${v} ${low ? "low" : ""} ${differs ? "differs" : ""}" title="${esc(tip)}">${WORD[v]}</span>`;
 }
 
@@ -306,14 +306,14 @@ function renderBoard() {
       <span>${esc(r.outside ? "outside the graph" : (r.match?.type || r.type).replace("_", " "))}</span></button></td>
       ${state.cities.map((c) => `<td>${cell(r, c)}</td>`).join("")}</tr>`).join("");
   const lens = `<div class="lens" role="radiogroup" aria-label="Whose verdicts">
-      <button type="button" role="radio" aria-checked="${state.lens === "qloo"}" data-lens="qloo">Measured by Qloo</button>
+      <button type="button" role="radio" aria-checked="${state.lens === "qloo"}" data-lens="qloo">Room</button>
       <button type="button" role="radio" aria-checked="${state.lens === "gemini"}" data-lens="gemini">Gemini alone</button>
     </div>`;
   const g = state.guess;
   const lensNote = state.lens === "gemini"
     ? (g?.loading ? "Asking Gemini to guess from memory…" : g?.error ? esc(g.error)
-      : "Gemini's guess from memory, with no Qloo data. Outlined cells are where the two disagree.")
-    : (g?.key === roomKey() && g.data ? "Outlined cells are where Gemini's guess disagrees with Qloo's measurement." : "");
+      : "Gemini guessing everything from memory, Loved included. Outlined cells are where it disagrees with Room.")
+    : (g?.key === roomKey() && g.data ? "Outlined cells are where Gemini alone disagrees with Room." : "");
   board.innerHTML = `${lens}${lensNote ? `<p class="lensnote">${lensNote}</p>` : ""}<table class="board"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <p class="boardnote">The number under each city is how much of the script lands there. Tap a city to underline the script for it.</p>
     <div class="agentcall">
@@ -357,7 +357,7 @@ function renderDetail() {
       <div class="crow-top"><span class="city">${esc(c)}</span><span class="vw v-${v || ""}">${v ? WORD[v] : "…"}</span></div>
       ${d ? `<p class="why">${esc(d.why)}${d.confidence === "low" ? " Qloo holds thin data for this city." : ""}</p>
       <div class="bars">${bar("Known", "k", d.known)}${bar("Loved", "l", d.loved)}</div>
-      ${state.math ? `<div class="math">cells ${d.cells} · household-name cells ${d.base_cells ?? "n/a"} · median affinity ${d.loved ?? "n/a"}${s.mode === "global" ? " · global popularity only" : ""}</div>` : ""}` : ""}
+      ${state.math ? `<div class="math">recognition (Gemini) ${d.recognition ?? "n/a"} · fan presence (Qloo) ${d.presence ?? "n/a"} = ${d.cells} cells against ${d.base_cells ?? "n/a"} for a household name · median affinity (Qloo) ${d.loved ?? "n/a"}${s.mode === "memory" ? " · Qloo holds no map for this one" : ""}</div>` : ""}` : ""}
       ${weak && !sw ? `<button class="swapbtn" data-swap="${ref.id}" data-city="${esc(c)}" type="button">Find a ${esc(c)} swap</button>` : ""}
       ${sw ? renderSwaps(ref, c, sw) : ""}
     </div>`;

@@ -1,0 +1,317 @@
+{
+ "cities": [
+  "New York",
+  "Los Angeles",
+  "Dallas",
+  "Atlanta",
+  "Toronto",
+  "London",
+  "Johannesburg",
+  "Lagos",
+  "Nairobi",
+  "Mumbai"
+ ],
+ "note": "Each reference has one home city in the set: the only city in its country, or for the four US cities a team or chain rooted in that metro.",
+ "references": [
+  {
+   "name": "New York Knicks",
+   "type": "brand",
+   "home": "New York"
+  },
+  {
+   "name": "New York Mets",
+   "type": "brand",
+   "home": "New York"
+  },
+  {
+   "name": "Nathan's Famous",
+   "type": "brand",
+   "home": "New York"
+  },
+  {
+   "name": "Wu-Tang Clan",
+   "type": "artist",
+   "home": "New York"
+  },
+  {
+   "name": "A Boogie wit da Hoodie",
+   "type": "artist",
+   "home": "New York"
+  },
+  {
+   "name": "New York Rangers",
+   "type": "brand",
+   "home": "New York"
+  },
+  {
+   "name": "Los Angeles Dodgers",
+   "type": "brand",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "Los Angeles Clippers",
+   "type": "brand",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "El Pollo Loco",
+   "type": "brand",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "YG",
+   "type": "artist",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "Los Angeles Kings",
+   "type": "brand",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "In-N-Out Burger",
+   "type": "brand",
+   "home": "Los Angeles"
+  },
+  {
+   "name": "Dallas Mavericks",
+   "type": "brand",
+   "home": "Dallas"
+  },
+  {
+   "name": "Texas Rangers",
+   "type": "brand",
+   "home": "Dallas"
+  },
+  {
+   "name": "Whataburger",
+   "type": "brand",
+   "home": "Dallas"
+  },
+  {
+   "name": "Torchy's Tacos",
+   "type": "brand",
+   "home": "Dallas"
+  },
+  {
+   "name": "Dallas Stars",
+   "type": "brand",
+   "home": "Dallas"
+  },
+  {
+   "name": "Leon Bridges",
+   "type": "artist",
+   "home": "Dallas"
+  },
+  {
+   "name": "Atlanta Hawks",
+   "type": "brand",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Atlanta Braves",
+   "type": "brand",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Zaxby's",
+   "type": "brand",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Gucci Mane",
+   "type": "artist",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Atlanta Falcons",
+   "type": "brand",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Waffle House",
+   "type": "brand",
+   "home": "Atlanta"
+  },
+  {
+   "name": "Toronto Raptors",
+   "type": "brand",
+   "home": "Toronto"
+  },
+  {
+   "name": "Toronto Maple Leafs",
+   "type": "brand",
+   "home": "Toronto"
+  },
+  {
+   "name": "Tim Hortons",
+   "type": "brand",
+   "home": "Toronto"
+  },
+  {
+   "name": "PartyNextDoor",
+   "type": "artist",
+   "home": "Toronto"
+  },
+  {
+   "name": "Swiss Chalet",
+   "type": "brand",
+   "home": "Toronto"
+  },
+  {
+   "name": "Toronto Blue Jays",
+   "type": "brand",
+   "home": "Toronto"
+  },
+  {
+   "name": "Greggs",
+   "type": "brand",
+   "home": "London"
+  },
+  {
+   "name": "EastEnders",
+   "type": "tv_show",
+   "home": "London"
+  },
+  {
+   "name": "Stormzy",
+   "type": "artist",
+   "home": "London"
+  },
+  {
+   "name": "Tottenham Hotspur F.C.",
+   "type": "brand",
+   "home": "London"
+  },
+  {
+   "name": "Pret A Manger",
+   "type": "brand",
+   "home": "London"
+  },
+  {
+   "name": "Coronation Street",
+   "type": "tv_show",
+   "home": "London"
+  },
+  {
+   "name": "Kaizer Chiefs F.C.",
+   "type": "brand",
+   "home": "Johannesburg"
+  },
+  {
+   "name": "Orlando Pirates F.C.",
+   "type": "brand",
+   "home": "Johannesburg"
+  },
+  {
+   "name": "Kabza De Small",
+   "type": "artist",
+   "home": "Johannesburg"
+  },
+  {
+   "name": "DJ Maphorisa",
+   "type": "artist",
+   "home": "Johannesburg"
+  },
+  {
+   "name": "Asake",
+   "type": "artist",
+   "home": "Lagos"
+  },
+  {
+   "name": "Olamide",
+   "type": "artist",
+   "home": "Lagos"
+  },
+  {
+   "name": "Wizkid",
+   "type": "artist",
+   "home": "Lagos"
+  },
+  {
+   "name": "Big Brother Naija",
+   "type": "tv_show",
+   "home": "Lagos"
+  },
+  {
+   "name": "Chicken Republic",
+   "type": "brand",
+   "home": "Lagos"
+  },
+  {
+   "name": "King of Boys",
+   "type": "movie",
+   "home": "Lagos"
+  },
+  {
+   "name": "Sauti Sol",
+   "type": "artist",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Khaligraph Jones",
+   "type": "artist",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Nviiri the Storyteller",
+   "type": "artist",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Mumbai Indians",
+   "type": "brand",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Arijit Singh",
+   "type": "artist",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Haldiram's",
+   "type": "brand",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Taarak Mehta Ka Ooltah Chashmah",
+   "type": "tv_show",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Badshah",
+   "type": "artist",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Pick n Pay",
+   "type": "brand",
+   "home": "Johannesburg"
+  },
+  {
+   "name": "Tusker",
+   "type": "brand",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Nyashinski",
+   "type": "artist",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Bien",
+   "type": "artist",
+   "home": "Nairobi"
+  },
+  {
+   "name": "Parle-G",
+   "type": "brand",
+   "home": "Mumbai"
+  },
+  {
+   "name": "Skeem Saam",
+   "type": "tv_show",
+   "home": "Johannesburg"
+  }
+ ]
+}

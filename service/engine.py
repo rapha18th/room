@@ -14,6 +14,7 @@ import difflib
 import re
 import statistics
 
+import llm
 from cache import cached, Cache
 from qloo import qloo, entities, QlooError
 
@@ -283,49 +284,67 @@ def verdict(known: float, loved: float | None, popularity: float = 0) -> str:
     return "lands"
 
 
+async def recognition(entity: dict, etype: str, cities: list[dict], age: str | None) -> dict:
+    """Gemini's estimate of how much of each city recognises the entity. Memory is good at fame."""
+    names = [c["name"] for c in cities]
+
+    async def run():
+        g = await llm.guess_room([{"id": "x", "name": entity.get("name") or "", "type": etype}], names, age,
+                                 model=llm.SWAP_MODEL)
+        return {c: v["known"] for c, v in (g.get("x") or {}).items()}
+
+    try:
+        return await cached(Cache.key("recog", entity["entity_id"], names, age, llm.SWAP_MODEL), run)
+    except Exception as e:  # the map alone still scores
+        print(f"recognition failed for {entity.get('name')}: {e}")
+        return {}
+
+
 async def score(entity: dict, etype: str, names: list[str], age: str | None = None) -> dict:
+    """Known: Gemini's recognition, raised where Qloo measures a local fan base.
+    Loved: Qloo's median affinity in the city, from the age-filtered map when an age band is set."""
     cities = await room(names)
     base_id = await baseline_id(etype)
-    calls = [profile(entity["entity_id"], cities), profile(base_id, cities)]
+    calls = [profile(entity["entity_id"], cities), profile(base_id, cities), recognition(entity, etype, cities, age)]
     if age:
         calls.append(profile(entity["entity_id"], cities, age))
     results = await asyncio.gather(*calls)
-    prof, base = results[0], results[1]
-    aged = results[2] if age else None
+    prof, base, recog = results[0], results[1], results[2]
+    aged = results[3] if age else None
 
     wanted = list(dict.fromkeys(c["name"] for c in await asyncio.gather(*[city(n) for n in names])))
-    out = {"entity_id": entity["entity_id"], "mode": "map", "cities": {}, "elsewhere": None, "age": age}
-
-    if prof["total"] == 0:
-        pop = entity.get("popularity") or 0
-        v = "global" if pop >= 0.97 else "unscored"
-        out["mode"] = "global"
-        for n in wanted:
-            out["cities"][n] = {"verdict": v, "known": round(pop, 2), "loved": None,
-                                "confidence": "low", "why": VERDICTS[v], "cells": 0, "base_cells": None}
-        return out
+    mapped = prof["total"] > 0
+    out = {"entity_id": entity["entity_id"], "mode": "map" if mapped else "memory", "cities": {},
+           "elsewhere": None, "age": age}
+    pop = entity.get("popularity") or 0
 
     rows = {}
     for c in cities:
         n = c["name"]
-        cells = prof["cities"][n]["cells"]
+        cells = prof["cities"][n]["cells"] if mapped else 0
         bcells = base["cities"][n]["cells"]
-        known = min(1.0, cells / max(bcells, 1))
-        loved = (aged["cities"][n]["median"] if aged else prof["cities"][n]["median"]) if cells >= 5 else None
-        v = verdict(known, loved, entity.get("popularity") or 0)
+        presence = min(1.0, cells / max(bcells, 1))
+        gk = recog.get(n)
+        known = max(gk, presence) if gk is not None else (presence if mapped else pop)
+        loved = None
+        if mapped and cells >= 5:
+            loved = aged["cities"][n]["median"] if aged else prof["cities"][n]["median"]
+        v = verdict(known, loved, pop)
         rows[n] = {
             "verdict": v,
             "known": round(known, 2),
+            "recognition": round(gk, 2) if gk is not None else None,
+            "presence": round(presence, 2),
             "ratio": round(cells / max(bcells, 1), 3),
             "loved": round(loved, 2) if loved is not None else None,
-            "confidence": "low" if bcells < THIN else "high",
+            "confidence": "low" if (bcells < THIN or not mapped) else "high",
             "why": VERDICTS[v],
             "cells": cells,
             "base_cells": bcells,
         }
     for n in wanted:
         out["cities"][n] = rows[n]
-    home = max(rows, key=lambda n: (rows[n]["known"], rows[n]["loved"] or 0))
+    home = max(rows, key=lambda n: (rows[n]["ratio"], rows[n]["loved"] or 0))   # where the fans concentrate
     out["elsewhere"] = {"city": home, **rows[home]}
     return out
 

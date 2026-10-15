@@ -188,13 +188,18 @@ REFERENCES (id | name | kind):
 """
 
 
-async def guess_room(refs: list[dict], cities: list[str], age: str | None = None) -> dict:
+async def guess_room(refs: list[dict], cities: list[str], age: str | None = None, model: str = MODEL) -> dict:
     """Gemini's own guess at Known and Loved per reference per city, with no Qloo data."""
     rows = "\n".join(f"{r['id']} | {r['name']} | {r['type'].replace('_', ' ')}" for r in refs)
     who = f"The audience is aged {age.replace('_', ' ').replace(',', ' or ')}.\n" if age else ""
-    parsed = await generate(GUESS.format(age=who, cities=", ".join(cities), rows=rows), RoomGuess, 0.0)
+    parsed = await generate(GUESS.format(age=who, cities=", ".join(cities), rows=rows), RoomGuess, 0.0, model)
     out = {}
     for g in (parsed.references if parsed else []):
-        out[g.id] = {c.city: {"known": max(0.0, min(1.0, c.known)), "loved": max(0.0, min(1.0, c.loved))}
-                     for c in g.cities}
+        named = {}
+        for c in g.cities:
+            # Map the model's spelling back to the requested city ("New York City" -> "New York").
+            want = next((x for x in cities if x.lower() == c.city.lower()), None) or                 next((x for x in cities if x.lower() in c.city.lower() or c.city.lower() in x.lower()), None)
+            if want:
+                named[want] = {"known": max(0.0, min(1.0, c.known)), "loved": max(0.0, min(1.0, c.loved))}
+        out[g.id] = named
     return out
