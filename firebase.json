@@ -2,14 +2,56 @@
   "hosting": {
     "site": "sozoroom",
     "public": "web",
-    "ignore": ["firebase.json", "**/.*"],
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
     "rewrites": [
-      { "source": "/api/**", "run": { "serviceId": "room-api", "region": "us-central1" } },
-      { "source": "**", "destination": "/index.html" }
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "room-api",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/mcp",
+        "run": {
+          "serviceId": "room-api",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/mcp/**",
+        "run": {
+          "serviceId": "room-api",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
     ],
     "headers": [
-      { "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache, max-age=0" }] },
-      { "source": "/favicon.svg", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, max-age=0"
+          }
+        ]
+      },
+      {
+        "source": "/favicon.svg",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      }
     ]
   }
 }

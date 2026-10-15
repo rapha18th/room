@@ -20,7 +20,36 @@ from cache import cache, Cache  # noqa: E402
 import llm  # noqa: E402
 from qloo import QlooError  # noqa: E402
 
-app = FastAPI(title="Room")
+import contextlib  # noqa: E402
+
+import mcp_server  # noqa: E402
+
+_mcp_app = mcp_server.app()
+
+
+@contextlib.asynccontextmanager
+async def lifespan(_):
+    async with mcp_server.server.session_manager.run():
+        yield
+
+
+app = FastAPI(title="Room", lifespan=lifespan)
+app.mount("/mcp", _mcp_app)
+
+
+class _McpSlash:
+    """MCP clients post to /mcp; the mounted app answers at /mcp/. Rewrite before routing, no redirect."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/mcp":
+            scope = {**scope, "path": "/mcp/", "raw_path": b"/mcp/"}
+        await self.inner(scope, receive, send)
+
+
+app.add_middleware(_McpSlash)
 
 MAX_TEXT = 6000
 MAX_CITIES = 4
@@ -127,6 +156,28 @@ async def swap(body: SwapIn, request: Request):
     if not cands:
         return {"swaps": []}
     return {"swaps": await llm.pick_swaps(body.sentence, body.surface, body.role, body.city, cands)}
+
+
+# ---------- second opinion: Gemini alone, with no Qloo data ----------
+
+class GuessIn(BaseModel):
+    refs: list[dict] = Field(max_length=30)
+    cities: list[str] = Field(min_length=1, max_length=MAX_CITIES)
+    age: str | None = None
+
+
+@app.post("/api/guess")
+async def guess(body: GuessIn, request: Request):
+    limit(request, 20)
+    check_age(body.age)
+    refs = [{"id": r["id"], "name": r["name"], "type": r.get("type", "brand")} for r in body.refs]
+    key = Cache.key("guess", refs, body.cities, body.age, llm.MODEL)
+    hit = await cache.get(key)
+    if hit:
+        return hit
+    out = {"guess": await llm.guess_room(refs, body.cities, body.age)}
+    await cache.set(key, out)
+    return out
 
 
 # ---------- the rewrite agent: one short step per request ----------

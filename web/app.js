@@ -51,6 +51,8 @@ const state = {
   selected: null,
   math: false,
   gen: 0,
+  lens: "qloo",    // "qloo": measured by Qloo; "gemini": Gemini's guess from memory
+  guess: null,     // { key, data: { refId: { city: { known, loved } } }, loading, error }
 };
 state.focus = state.cities[0];
 
@@ -71,7 +73,29 @@ const scoreOf = (ref) => {
 };
 const scorable = (ref) => ref.match && !ref.outside;
 
+// Same thresholds as the engine, for Gemini's numbers.
+function verdictFromNumbers(known, loved, popularity = 0) {
+  if (known < 0.45 && popularity >= 0.995) return "famous";
+  if (known < 0.15) return "dies";
+  if (known < 0.45) return "inside";
+  if (loved != null && loved < 0.45) return "roast";
+  return "lands";
+}
+
+function guessVerdict(ref, city) {
+  const g = state.guess;
+  if (!g || g.key !== roomKey() || !g.data) return null;
+  const d = g.data[ref.id]?.[city];
+  if (!d) return "unscored";
+  return verdictFromNumbers(d.known, d.loved, ref.match?.popularity || 0);
+}
+
 function verdictFor(ref, city) {
+  if (state.lens === "gemini" && !state.agent && !ref.outside && ref.match) return guessVerdict(ref, city);
+  return measuredVerdict(ref, city);
+}
+
+function measuredVerdict(ref, city) {
   if (ref.outside) return "outside";
   if (!ref.match) return "unscored";
   const s = scoreOf(ref);
@@ -148,6 +172,7 @@ async function readRoom() {
   state.refs = [];
   state.scores = {};
   state.swaps = {};
+  state.guess = null;
   state.selected = null;
   $("readBtn").disabled = true;
   status("Reading the script…");
@@ -166,6 +191,7 @@ async function readRoom() {
 }
 
 async function scoreAll() {
+  if (state.lens === "gemini") loadGuess();
   const gen = ++state.gen;
   const key = roomKey();
   const todo = state.refs.filter((r) => scorable(r) && !(state.scores[r.id]?.key === key));
@@ -250,8 +276,11 @@ function roomScore(city, refs = state.refs) {
 function cell(ref, city) {
   const v = verdictFor(ref, city);
   if (!v) return `<span class="cell wait" aria-label="scoring"></span>`;
-  const low = scoreOf(ref)?.cities?.[city]?.confidence === "low";
-  return `<span class="cell v-${v} ${low ? "low" : ""}" title="${esc(LEGEND[v] || "")}">${WORD[v]}</span>`;
+  const low = state.lens === "qloo" && scoreOf(ref)?.cities?.[city]?.confidence === "low";
+  const other = state.lens === "gemini" ? measuredVerdict(ref, city) : guessVerdict(ref, city);
+  const differs = other && other !== v && !["outside", "unscored"].includes(v);
+  const tip = differs ? `${state.lens === "gemini" ? "Qloo measures" : "Gemini guesses"}: ${WORD[other]}` : (LEGEND[v] || "");
+  return `<span class="cell v-${v} ${low ? "low" : ""} ${differs ? "differs" : ""}" title="${esc(tip)}">${WORD[v]}</span>`;
 }
 
 function renderBoard() {
@@ -276,7 +305,16 @@ function renderBoard() {
     <tr><td><button class="rowname" data-ref="${r.id}" type="button"><b>${esc(r.surface)}</b>
       <span>${esc(r.outside ? "outside the graph" : (r.match?.type || r.type).replace("_", " "))}</span></button></td>
       ${state.cities.map((c) => `<td>${cell(r, c)}</td>`).join("")}</tr>`).join("");
-  board.innerHTML = `<table class="board"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
+  const lens = `<div class="lens" role="radiogroup" aria-label="Whose verdicts">
+      <button type="button" role="radio" aria-checked="${state.lens === "qloo"}" data-lens="qloo">Measured by Qloo</button>
+      <button type="button" role="radio" aria-checked="${state.lens === "gemini"}" data-lens="gemini">Gemini alone</button>
+    </div>`;
+  const g = state.guess;
+  const lensNote = state.lens === "gemini"
+    ? (g?.loading ? "Asking Gemini to guess from memory…" : g?.error ? esc(g.error)
+      : "Gemini's guess from memory, with no Qloo data. Outlined cells are where the two disagree.")
+    : (g?.key === roomKey() && g.data ? "Outlined cells are where Gemini's guess disagrees with Qloo's measurement." : "");
+  board.innerHTML = `${lens}${lensNote ? `<p class="lensnote">${lensNote}</p>` : ""}<table class="board"><thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody></table>
     <p class="boardnote">The number under each city is how much of the script lands there. Tap a city to underline the script for it.</p>
     <div class="agentcall">
       <button class="primary" data-agent type="button" ${scoring ? "disabled" : ""}>Rewrite for ${esc(state.focus)}</button>
@@ -375,6 +413,25 @@ function renderSwaps(ref, city, sw) {
       <button class="ghost use" ${x.score ? "" : "disabled"} data-use="${ref.id}" data-city="${esc(city)}" data-i="${i}" type="button">Use this line</button>
     </div>`;
   }).join("")}</div>`;
+}
+
+// ---------- second opinion ----------
+
+async function loadGuess() {
+  const key = roomKey();
+  if (state.guess?.key === key && (state.guess.data || state.guess.loading)) return;
+  const refs = state.refs.filter((r) => r.match && !r.outside)
+    .map((r) => ({ id: r.id, name: r.match.name, type: r.type }));
+  if (!refs.length) return;
+  state.guess = { key, loading: true };
+  render();
+  try {
+    const { guess } = await api("/guess", { refs, cities: state.cities, age: state.age || null });
+    if (state.guess?.key === key) state.guess = { key, data: guess };
+  } catch (err) {
+    if (state.guess?.key === key) state.guess = { key, error: err.message };
+  }
+  render();
 }
 
 // ---------- the rewrite agent ----------
@@ -551,6 +608,13 @@ function useSwap(refId, city, i) {
 $("panel").addEventListener("click", (e) => {
   const t = e.target;
   if (t.closest("[data-agent]")) { runAgent(); return; }
+  const lensBtn = t.closest("[data-lens]");
+  if (lensBtn) {
+    state.lens = lensBtn.dataset.lens;
+    render();
+    if (state.lens === "gemini") loadGuess();
+    return;
+  }
   if (t.closest("[data-agent-use]")) { useAgent(); return; }
   if (t.closest("[data-agent-discard]")) { state.agent = null; render(); summarise(); return; }
   if (t.closest("[data-back]")) { state.selected = null; render(); return; }
