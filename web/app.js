@@ -284,7 +284,13 @@ function renderDetail() {
         <select data-rematch="${ref.id}" aria-label="Qloo match">
           ${(ref.candidates || [m]).map((c) => `<option value="${esc(c.entity_id)}" ${c.entity_id === m.entity_id ? "selected" : ""}>${esc(c.name)}${c.disambiguation && c.disambiguation !== c.name ? " · " + esc(c.disambiguation) : ""}</option>`).join("")}
         </select>${ref.certain ? "" : `<span class="warn">Check this match.</span>`}`
-      : `<span class="warn">Qloo found no match.</span>`;
+      : ref.candidates?.length
+        ? `<span class="warn">Qloo holds no clear match.</span>
+          <select data-rematch="${ref.id}" aria-label="Pick a Qloo match">
+            <option value="" selected>Pick the closest</option>
+            ${ref.candidates.map((c) => `<option value="${esc(c.entity_id)}">${esc(c.name)} · ${esc((c.type || "").replace("_", " "))}${c.disambiguation && c.disambiguation !== c.name ? " · " + esc(c.disambiguation) : ""}</option>`).join("")}
+          </select>`
+        : `<span class="warn">Qloo found no match.</span>`;
 
   const rows = !scorable(ref) ? "" : state.cities.map((c) => {
     const d = s?.cities?.[c];
@@ -443,7 +449,10 @@ $("panel").addEventListener("change", async (e) => {
   const sel = e.target.closest("[data-rematch]");
   if (!sel) return;
   const ref = state.refs.find((r) => r.id === sel.dataset.rematch);
-  ref.match = (ref.candidates || []).find((c) => c.entity_id === sel.value) || ref.match;
+  const pick = (ref.candidates || []).find((c) => c.entity_id === sel.value);
+  if (!pick) return;
+  ref.match = pick;
+  if (pick.type) ref.type = pick.type;
   ref.certain = true;
   delete state.scores[ref.id];
   render();

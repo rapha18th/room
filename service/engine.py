@@ -75,6 +75,7 @@ PRESET = {
 AGES = ["24_and_younger", "25_to_29", "30_to_34", "35_to_44", "45_to_54", "55_and_older"]
 
 THIN = 40  # baseline cells below this make a city's score low-confidence
+MIN_MATCH = 0.65  # below this a search hit is a different thing with a similar name
 
 
 # ---------- cities ----------
@@ -182,19 +183,25 @@ def match_quality(query: str, hit_name: str) -> float:
     return difflib.SequenceMatcher(None, a, b).ratio()
 
 
+def _rank(name: str, hits: list[dict]) -> list[dict]:
+    return sorted(hits, key=lambda h: (-match_quality(name, h["name"]), -(h.get("popularity") or 0)))
+
+
 async def resolve(name: str, etype: str) -> dict:
-    hits = await search(name, etype)
-    typed = bool(hits)
-    if not hits:
-        hits = await search(name, None)
-    if not hits:
-        return {"match": None, "candidates": [], "certain": False}
-    ranked = sorted(hits, key=lambda h: (-match_quality(name, h["name"]), -(h.get("popularity") or 0)))
-    best = ranked[0]
-    q = match_quality(name, best["name"])
-    # A chain that only resolves to one venue (Wetherspoons -> a pub in Yate) scores at the wrong scale.
-    certain = q >= 0.8 and typed and best.get("type") == etype
-    return {"match": best, "candidates": ranked[:5], "certain": certain, "quality": round(q, 2)}
+    """Best entity of the requested type. A weak or off-type match comes back unmatched,
+    with Qloo's nearest entities as candidates for the writer to pick from."""
+    typed = [h for h in await search(name, etype) if match_quality(name, h["name"]) >= MIN_MATCH]
+    if typed:
+        ranked = _rank(name, typed)
+        q = match_quality(name, ranked[0]["name"])
+        return {"match": ranked[0], "candidates": ranked[:5], "certain": q >= 0.8, "quality": round(q, 2)}
+    loose = _rank(name, await search(name, None))
+    same = [h for h in loose if h.get("type") == etype and match_quality(name, h["name"]) >= MIN_MATCH]
+    if same:
+        return {"match": same[0], "candidates": loose[:5], "certain": False,
+                "quality": round(match_quality(name, same[0]["name"]), 2)}
+    # e.g. Wetherspoons: Qloo holds single pubs and no chain brand. One pub scores at the wrong scale.
+    return {"match": None, "candidates": loose[:5], "certain": False}
 
 
 # ---------- heatmap profile ----------

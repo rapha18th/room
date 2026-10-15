@@ -23,7 +23,7 @@ app = FastAPI(title="Room")
 
 MAX_TEXT = 6000
 MAX_CITIES = 4
-READ_VERSION = 2  # bump when the extraction prompt changes
+READ_VERSION = 3  # bump when the extraction prompt changes
 
 # ---------- light per-IP limiter: the demo spends a shared key ----------
 _hits: dict[str, list[float]] = {}
