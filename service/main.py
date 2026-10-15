@@ -90,6 +90,7 @@ async def health():
 
 class ReadIn(BaseModel):
     text: str = Field(max_length=MAX_TEXT)
+    keep: bool = False   # True for the built-in samples: the shared cache keeps them warm for everyone
 
 
 @app.post("/api/read")
@@ -112,7 +113,7 @@ async def read(body: ReadIn, request: Request):
         r["id"] = f"r{i}"
     result = {"references": out}
     if out:
-        await cache.set(Cache.key("read", body.text, llm.MODEL, READ_VERSION), result)
+        await cache.set(Cache.key("read", body.text, llm.MODEL, READ_VERSION), result, keep=body.keep)
     return result
 
 

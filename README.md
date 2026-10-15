@@ -6,6 +6,18 @@ Room reads a script, a stand-up set, a speech, an ad, a deck or a document. It f
 
 Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Qloo knows taste. Room uses each for what it does best, and the benchmark below shows why.
 
+## Try it
+
+**Live at [sozoroom.web.app](https://sozoroom.web.app).** Open to everyone, on any screen. Ninety seconds:
+
+1. Press **Read the room**. Room reads the launch-ad sample for Atlanta, Lagos and London and scores every reference in each city.
+2. Press **Review for Atlanta**. In about half a minute Room suggests Chick-fil-A for Nando's. Accept it and the Atlanta score climbs from 80% to 92%.
+3. Switch to **Tour** and press **Route the tour**. Every stop gets its own version of the set, and its own set list.
+4. Load the **Stand-up** sample and review it for Dallas. Room keeps every weak reference there, because each one carries the joke.
+5. Drop a Word file, a deck or a PDF on the page, review it, and press **Download** for the file with tracked changes.
+
+Gemini chooses among Qloo's candidates, so a swap or a score can shift a point or two between runs.
+
 ## What it does
 
 1. **Read.** Gemini finds every reference in the text and names the job it does in its line ("cheap 3am chaos", "symbol of giving up").
@@ -91,7 +103,32 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 |---|---|
 | `GET /search` | Reference to entity; city name to locality and boundary |
 | `GET /v2/insights` `filter.type=urn:heatmap` | Known and loved per city over the room polygon, with `signal.demographics.age` |
-| `GET /v2/insights` `filter.type=urn:entity:*` | Swap candidates by `signal.interests.entities` and by `filter.tags`, scoped with `signal.location.query` |
+| `GET /v2/insights` `filter.type=urn:entity:*` | Swap candidates by `signal.interests.entities` and by `filter.tags`, scoped with `signal.location` set to the city's own polygon |
+
+## A request, start to finish
+
+Nando's, in the launch ad, for a room of Atlanta, Lagos and London. Every call is a GET to `https://hackathon.api.qloo.com` with the key in the `X-Api-Key` header, held server-side.
+
+1. **Read.** Gemini returns `Nando's`, type `brand`, job in the line: *crowd pleasing casual dining staple*.
+2. **Match.** `GET /search?query=Nando's&types=urn:entity:brand&take=5` returns the Nando's brand entity with its tags. The name matches exactly, so Room marks it certain.
+3. **Map.** `GET /v2/insights?filter.type=urn:heatmap&filter.location=MULTIPOLYGON(((Atlanta box)),((Lagos box)),((London box)),((five anchor boxes)))&signal.interests.entities=<Nando's id>&take=50` returns heatmap cells, each with `affinity`, `affinity_rank` and `popularity`. Room assigns every cell to its city.
+4. **Score.** Loved is the median cell affinity in Atlanta. Known is Gemini's recognition estimate, raised by Qloo's fan presence (Nando's cells against Coca-Cola's in the same room). Nando's reads *Inside* in Atlanta: a slice of the city loves it.
+5. **Find.** `GET /v2/insights?filter.type=urn:entity:brand&signal.interests.entities=<Nando's id>&signal.location=POLYGON((Atlanta box))&filter.exclude.entities=<Nando's id>&take=10`, and the same call with `filter.tags=<Nando's top tags>`, return brands Atlanta has affinity for.
+6. **Pick and test.** Gemini keeps the candidates that do the same job and rewrites the line. Room maps each pick with a fresh heatmap over the same room. Chick-fil-A lands in Atlanta, and the room score moves from 80% to 92%.
+
+## What a score means
+
+- Qloo affinity describes audiences in a place, in aggregate. Room reads rooms and crowds, and every score speaks for the whole room.
+- Known and Loved are relative signals on one scale for the cities in the room. Read them as a ranking: Atlanta loves Chick-fil-A more than Nando's.
+- Qloo's hackathon data is richest for the US and the UK. Room flags loose matches and coverage gaps (Big Brother Naija and Tusker in the benchmark) and lets the writer pick the right entity.
+- Each verdict shows its source. Known comes from Gemini with a Qloo floor; Loved, age, swaps and tours come from Qloo. The **Gemini alone** switch shows the model's own guess beside Room's.
+
+## Your text and your files
+
+- Room sends Qloo entity names, tags and city boundaries. Your words stay with Room.
+- Gemini on Vertex AI reads the text to find references and rewrite lines. Pasted text stays in the server's working memory and clears when the instance recycles. Uploaded files are parsed and rebuilt in memory and come straight back to you.
+- The shared cache in Firestore holds Qloo lookups and the built-in samples.
+- The Qloo key lives in Secret Manager and reaches the server as an environment variable. The browser talks only to Room.
 
 ## Run locally
 
@@ -112,9 +149,11 @@ The API runs on Cloud Run and Firebase Hosting serves `web/` with `/api/**` rewr
 ```bash
 gcloud run deploy room-api --source . --region us-central1 --allow-unauthenticated \
   --set-env-vars GOOGLE_CLOUD_PROJECT=<project>,ROOM_FIRESTORE_DB=room \
-  --set-secrets QLOO_API_KEY=room-qloo-key:latest --max-instances 3
+  --set-secrets QLOO_API_KEY=room-qloo-key:latest   --memory 1Gi --timeout 300 --max-instances 3
 firebase deploy --only hosting
 ```
+
+`--timeout 300` gives the MCP tool `rewrite_for_city` room to run the whole agent in one call. Point `.firebaserc` and the `site` in `firebase.json` at your own Firebase project and Hosting site.
 
 `ROOM_FIRESTORE_DB` names a Firestore database for the response cache. Room runs with an in-memory cache when it is unset.
 

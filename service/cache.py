@@ -1,6 +1,7 @@
 """Two-tier cache: process memory, then Firestore (named DB) or a local folder in dev.
 
 Only small JSON values go in here: search hits and per-city aggregates. Raw heatmaps stay out.
+Text people paste stays in process memory (keep=False); the shared tiers hold Qloo lookups and the samples.
 """
 
 import asyncio
@@ -57,11 +58,13 @@ class Cache:
                 print(f"cache: read failed ({e})")
         return None
 
-    async def set(self, k: str, v):
+    async def set(self, k: str, v, keep: bool = True):
         self.mem[k] = (time.time(), v)
         if len(self.mem) > 5000:
             for old in sorted(self.mem, key=lambda x: self.mem[x][0])[:1000]:
                 self.mem.pop(old, None)
+        if not keep:
+            return
         if self.disk:
             (self.disk / f"{k}.json").write_text(json.dumps(v), encoding="utf-8")
         if self.db:

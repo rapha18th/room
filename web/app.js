@@ -31,6 +31,9 @@ const MOD = APPLE ? "⌘" : "Ctrl";
 const WHO = { you: "You", gemini: "Gemini", qloo: "Qloo", room: "Room" };
 
 const SAMPLES = [
+  { name: "Launch ad", slug: "EXT. SUMMER CAMPAIGN", cities: ["Atlanta", "Lagos", "London"],
+    stops: ["Atlanta", "Dallas", "London", "Lagos", "Nairobi"], text:
+`This summer, trade the Starbucks run for something louder. Burna Boy on the speakers, Squid Game on the big screen, and Nando's on every table. Bring the friend who still wears Crocs. We'll forgive them.` },
   { name: "Stand-up", slug: "INT. A FLIGHT. 2AM.", cities: ["Dallas", "London", "Johannesburg", "Lagos"],
     stops: ["Dallas", "Atlanta", "Toronto", "London", "Johannesburg", "Lagos"], text:
 `I flew into Dallas at 2am and the only thing open was a Whataburger. My cousin from London said that's just Greggs in a cowboy hat. He spent the whole flight watching Coronation Street on his phone, volume up, like the plane needed to know who cheated on who.
@@ -38,9 +41,6 @@ const SAMPLES = [
 I tried to fix the mood with some Kabza De Small. The guy in 14C asked if that was a new kind of yoga. So I put on Nickelback. Everyone hated it. Everyone knew every word.
 
 We landed, he bought Crocs at the airport, and I knew right then: this man has given up, and he has never been happier.` },
-  { name: "Launch ad", slug: "EXT. SUMMER CAMPAIGN", cities: ["Lagos", "Atlanta", "London"],
-    stops: ["Atlanta", "Dallas", "London", "Lagos", "Nairobi"], text:
-`This summer, trade the Starbucks run for something louder. Burna Boy on the speakers, Squid Game on the big screen, and Nando's on every table. Bring the friend who still wears Crocs. We'll forgive them.` },
   { name: "Best man", slug: "INT. RECEPTION HALL", cities: ["London", "Harare", "Toronto"],
     stops: ["London", "Manchester", "Toronto", "Harare"], text:
 `Tunde and I met at a Wetherspoons in Peckham. He was singing Oasis, badly. Ten years later he still thinks jollof rice is a personality, and he still quotes Love Actually every Christmas. Tonight we celebrate the only woman who ever made him miss an Arsenal match.` },
@@ -203,14 +203,14 @@ function renderControlsNow() {
     </span>`).join("");
   const full = state.cities.length >= MAX_CITIES;
   $("cityInput").disabled = full;
-  $("cityInput").placeholder = full ? "Four cities max" : "Add a city";
+  $("cityInput").placeholder = full ? "Room full" : "Add a city";
   $("route").innerHTML = state.tour.stops.map((c, i) => `
     <li><span class="chip ${c === state.tour.active ? "focus" : ""}"><span class="n">${i + 1}</span>
       <button class="name" data-stop="${esc(c)}" type="button">${esc(c)}</button>
       <button class="x" data-unstop="${esc(c)}" type="button" aria-label="Remove ${esc(c)}">×</button></span></li>`).join("");
   const tourFull = state.tour.stops.length >= MAX_STOPS;
   $("stopInput").disabled = tourFull;
-  $("stopInput").placeholder = tourFull ? "Eight stops max" : "Add a stop";
+  $("stopInput").placeholder = tourFull ? "Tour full" : "Add a stop";
   $("ages").innerHTML = AGES.map(([v, l]) =>
     `<button type="button" aria-pressed="${v === state.age}" data-age="${v}">${l}</button>`).join("");
 }
@@ -321,7 +321,8 @@ async function readRoom() {
   status("Reading…");
   render();
   try {
-    const { references } = await api("/read", { text });
+    // Only the built-in samples go to the shared cache; pasted text stays in server memory.
+    const { references } = await api("/read", { text, keep: SAMPLES.some((x) => x.text === text) });
     state.refs = references;
     if (!references.length) status("No references found. Room reads brands, artists, shows, films, books, people, teams and places.");
     render();
