@@ -153,6 +153,44 @@ async def rewrite_for_city(text: str, city: str, also_check: list[str] | None = 
     }
 
 
+@server.tool(description="Review a text for an audience in one city, like a spellchecker for culture: for every reference "
+                         "that falls flat there, Room suggests a local swap (tested with Qloo) or a cut, or explains why "
+                         "it keeps it. Nothing is applied; you choose which suggestions to use.")
+async def suggest_for_city(text: str, city: str, age: str | None = None) -> dict:
+    cities = _cities([city])
+    refs = await _read(text[:20000], cities, age)
+    p = await agent.plan(text, refs, city)
+    exclude = [r["match"]["entity_id"] for r in refs if r.get("match")]
+    taken: set[str] = set()
+    out = []
+    for step in p["plan"]:
+        ref = next((r for r in refs if r["id"] == step["ref_id"]), None)
+        if not ref:
+            continue
+        item = {"reference": ref["surface"], "line": ref["sentence"], "action": step["action"], "why": step["why"]}
+        proposal = None
+        if step["action"] == "swap":
+            f = await agent.find(ref, city, exclude + sorted(taken))
+            picks = [x for x in f["picks"] if x["candidate"]["entity_id"] not in taken]
+            if picks:
+                t = await agent.test(text, refs, ref["id"], picks, city, cities, age, apply_it=False)
+                proposal = t["proposal"]
+            if not proposal and agent.verdict_of(ref, city) == "dies":
+                proposal = (await agent.cut(text, refs, ref["id"], city, apply_it=False))["proposal"]
+        elif step["action"] == "drop":
+            proposal = (await agent.cut(text, refs, ref["id"], city, apply_it=False))["proposal"]
+        if proposal:
+            if proposal.get("candidate"):
+                taken.add(proposal["candidate"]["entity_id"])
+            item.update(action=proposal["action"], suggestion=proposal["line"], replacement=proposal.get("after"),
+                        verdict_now=proposal.get("verdict_before"), verdict_after=proposal.get("verdict_after"),
+                        why=proposal.get("why") or item["why"])
+        elif step["action"] != "keep":
+            item.update(action="keep", why=f"Nothing local beats {ref['surface']} in {city}.")
+        out.append(item)
+    return {"city": city, "room_score": p["before"], "suggestions": out}
+
+
 def app():
     """Starlette app for mounting under /mcp. Stateless, JSON responses, any Host header (Cloud Run)."""
     return server.streamable_http_app(
