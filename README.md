@@ -2,7 +2,7 @@
 
 **Read the room before you walk in.**
 
-Room reads a script, a stand-up set, a speech or an ad. It finds every cultural reference and tells you, city by city and age by age, whether each one lands with the people in the seats. When a reference dies, Room finds a local swap that does the same job in the line.
+Room reads a script, a stand-up set, a speech, an ad, a deck or a document. It finds every cultural reference and tells you, city by city and age by age, whether each one lands with the people in the seats. Then it works like a spellchecker for culture: for every reference that falls flat, it suggests a local swap that does the same job in the line, or a cut, and you accept or ignore each one. Take the set on tour and Room writes a version for every stop.
 
 Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Qloo knows taste. Room uses each for what it does best, and the benchmark below shows why.
 
@@ -31,19 +31,26 @@ Gemini is strong on fame: it read the internet. Qloo's heatmaps measure where fa
 
 So Room asks Gemini who recognises a reference, lets Qloo raise that wherever it measures fans, and takes Loved, age, swaps and every rewrite from Qloo's taste graph. Rerun with `python benchmark/run.py`; full rows in [`benchmark/results.md`](benchmark/results.md).
 
-## The rewrite agent
+## Review: a spellchecker for culture
 
-One button: **Rewrite for Atlanta**. The agent works in three tools and shows every step in a live trace, while the script on the page rewrites itself.
+**Review for Atlanta** runs an agent over the script and streams suggestions, each with **Accept** and **Ignore** (or <kbd>A</kbd> and <kbd>I</kbd>, <kbd>J</kbd> and <kbd>K</kbd> to move). On the page, every suggestion sits on its word like a tracked change; click it for the card.
 
 | Step | Who | What happens |
 |---|---|---|
-| Plan | Gemini | Reads the script and the room's verdicts, then decides which weak references to swap and which to keep. A reference stays when its foreignness is the point of the line. |
-| Find | Qloo, then Gemini | Qloo returns what the audience has affinity for; Gemini keeps the picks that do the same job and rewrites the line. |
-| Test | Qloo | Scores every pick in the same room with a fresh heatmap. The best one that lands goes into the script. |
+| Plan | Gemini | Reads the script and the city's verdicts, then decides for each weak reference: swap it, drop it, or keep it. A reference stays when its foreignness is the point of the line. |
+| Find | Qloo, then Gemini | Qloo returns what the audience has affinity for; Gemini keeps the picks that do the same job and rewrites the line. Each swap target serves one reference. |
+| Test | Qloo | Scores every pick in the same room with a fresh heatmap. The best one that lands becomes the suggestion. |
+| Cut | Gemini | Rewrites the line minus the reference, for drops and for dead references that every local swap fails to beat. |
 
-The agent stops when the city clears 90% or the plan runs out, and reports what the rewrite costs in every other city. Each step is its own short request, so the browser drives the loop and the trace streams as it happens.
+The room score counts up as you accept. The agent's full trace, every Qloo call and every choice, sits under **How the agent decided**. On the launch-ad sample, Review for Atlanta swaps Nando's for Chick-fil-A (80% to 92%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each belongs to the London cousin or to the punchline.
 
-On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (80% to 92%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
+## Tour mode
+
+Give Room up to eight stops. It scores the set in every city, runs a review per stop, and fills a tour sheet: one column per city, one row per reference, each cell saying what stays, what swaps and what gets cut, with the room score before and after. Tap a stop and the paper shows that city's version; **Print set lists** gives one page per stop with every change marked. On the launch ad routed through Atlanta, Dallas, London, Lagos and Nairobi, London swaps Chick-fil-A for Dishoom (76% to 88%) and Nairobi for Cold Stone Creamery (80% to 92%).
+
+## Files: decks and documents in, corrected files out
+
+Drop a PDF, PowerPoint (.pptx), Word (.docx), text or Markdown file anywhere on the page. Room reads slides, text boxes, tables and speaker notes, labels each block on the paper, and reviews it like any script. **Download** returns the same file with only the accepted changes written in: inside a paragraph only the changed words move, so a bold brand name stays bold and the rest of the line keeps its formatting. A PDF comes back as a Word document, since a PDF holds positioned glyphs rather than editable paragraphs. Libraries: python-pptx and python-docx (MIT), pypdf (BSD).
 
 ## Second opinion
 
@@ -62,6 +69,7 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 | `read_room(text, cities, age?)` | Every reference in a text, scored per city, with a room score per city |
 | `score_reference(name, kind, cities, age?)` | One reference across up to four cities |
 | `find_swap(line, reference, kind, city, job_in_line?)` | Local equivalents that keep the reference's job, each scored |
+| `suggest_for_city(text, city, age?)` | Review a text for one city: swaps, cuts and keeps, returned as suggestions for you to apply |
 | `rewrite_for_city(text, city, also_check?, max_swaps?)` | The rewrite agent, run on the server, with its trace |
 
 ## Qloo endpoints
