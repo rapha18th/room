@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 import engine
 import llm
 
+TARGET = 90  # room score the agent works toward in its city
 WEAK = {"dies", "inside", "unscored"}
 GOOD = {"lands", "roast", "famous", "global"}
 

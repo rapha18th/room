@@ -138,7 +138,7 @@ async def rewrite_for_city(text: str, city: str, also_check: list[str] | None = 
         trace += t["trace"]
         if t["applied"]:
             text, refs, swaps = t["text"], t["refs"], swaps + 1
-        if (agent.room_score(refs, city) or 0) >= 80:
+        if (agent.room_score(refs, city) or 0) >= agent.TARGET:
             break
     return {
         "script": text,

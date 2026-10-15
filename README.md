@@ -41,7 +41,7 @@ One button: **Rewrite for Atlanta**. The agent works in three tools and shows ev
 | Find | Qloo, then Gemini | Qloo returns what the audience has affinity for; Gemini keeps the picks that do the same job and rewrites the line. |
 | Test | Qloo | Scores every pick in the same room with a fresh heatmap. The best one that lands goes into the script. |
 
-The agent stops when the city clears 80% or the plan runs out, and reports what the rewrite costs in every other city. Each step is its own short request, so the browser drives the loop and the trace streams as it happens.
+The agent stops when the city clears 90% or the plan runs out, and reports what the rewrite costs in every other city. Each step is its own short request, so the browser drives the loop and the trace streams as it happens.
 
 On the launch-ad sample the agent swaps Nando's for Chick-fil-A for Atlanta (62% to 82%) and keeps Burna Boy for the ad's energy. On the stand-up sample it keeps every reference for Dallas, because each one belongs to the London cousin or to the punchline.
 

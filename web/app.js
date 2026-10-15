@@ -436,7 +436,7 @@ async function loadGuess() {
 
 // ---------- the rewrite agent ----------
 
-const TARGET = 80;
+const TARGET = 90;
 const WHO = { you: "You", gemini: "Gemini", qloo: "Qloo", room: "Room" };
 
 async function runAgent() {
