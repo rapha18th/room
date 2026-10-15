@@ -178,7 +178,8 @@ def match_quality(query: str, hit_name: str) -> float:
     a, b = query.lower().strip(), (hit_name or "").lower().strip()
     if a == b:
         return 1.0
-    if a in b or b in a:
+    # "Arsenal" in "Arsenal F.C." is the same thing; "Republic" in "Chicken Republic" is something else.
+    if (a in b or b in a) and min(len(a), len(b)) / max(len(a), len(b)) >= 0.6:
         return 0.85
     return difflib.SequenceMatcher(None, a, b).ratio()
 
@@ -211,13 +212,20 @@ async def profile(entity_id: str, cities: list[dict], age: str | None = None) ->
     poly = _polygon(cities)
 
     async def run():
-        body = await qloo.get("/v2/insights", {
-            "filter.type": "urn:heatmap",
-            "filter.location": poly,
-            "signal.interests.entities": entity_id,
-            "signal.demographics.age": age,
-            "take": 50,
-        })
+        try:
+            body = await qloo.get("/v2/insights", {
+                "filter.type": "urn:heatmap",
+                "filter.location": poly,
+                "signal.interests.entities": entity_id,
+                "signal.demographics.age": age,
+                "take": 50,
+            })
+        except QlooError as e:
+            # Some entities carry no geo data at all; Qloo answers 400 for those. Same as an empty map.
+            if e.status == 400 and "valid entity" in str(e):
+                body = {}
+            else:
+                raise
         cells = ((body or {}).get("results") or {}).get("heatmap") or []
         per: dict[str, list[float]] = {}
         for x in cells:
@@ -308,6 +316,7 @@ async def score(entity: dict, etype: str, names: list[str], age: str | None = No
         rows[n] = {
             "verdict": v,
             "known": round(known, 2),
+            "ratio": round(cells / max(bcells, 1), 3),
             "loved": round(loved, 2) if loved is not None else None,
             "confidence": "low" if bcells < THIN else "high",
             "why": VERDICTS[v],

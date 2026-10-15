@@ -158,3 +158,43 @@ async def pick_swaps(sentence: str, surface: str, role: str, city: str, candidat
     valid = {c["entity_id"]: c for c in candidates}
     return [{"candidate": valid[p.entity_id], "line": p.line, "why": p.why}
             for p in picks if p.entity_id in valid][:3]
+
+
+# ---------- LLM alone: the baseline Room is measured against ----------
+
+class CityGuess(BaseModel):
+    city: str
+    known: float = Field(description="0 to 1: share of this audience who would recognise the reference")
+    loved: float = Field(description="0 to 1: how warmly the ones who know it feel about it")
+
+
+class RefGuess(BaseModel):
+    id: str
+    cities: list[CityGuess]
+
+
+class RoomGuess(BaseModel):
+    references: list[RefGuess]
+
+
+GUESS = """Estimate, from your own knowledge only, how a live audience in each city relates to each reference.
+For every reference and every city give two numbers from 0 to 1:
+known = the share of the audience who would recognise it; loved = how warmly those who know it feel.
+{age}
+CITIES: {cities}
+
+REFERENCES (id | name | kind):
+{rows}
+"""
+
+
+async def guess_room(refs: list[dict], cities: list[str], age: str | None = None) -> dict:
+    """Gemini's own guess at Known and Loved per reference per city, with no Qloo data."""
+    rows = "\n".join(f"{r['id']} | {r['name']} | {r['type'].replace('_', ' ')}" for r in refs)
+    who = f"The audience is aged {age.replace('_', ' ').replace(',', ' or ')}.\n" if age else ""
+    parsed = await generate(GUESS.format(age=who, cities=", ".join(cities), rows=rows), RoomGuess, 0.0)
+    out = {}
+    for g in (parsed.references if parsed else []):
+        out[g.id] = {c.city: {"known": max(0.0, min(1.0, c.known)), "loved": max(0.0, min(1.0, c.loved))}
+                     for c in g.cities}
+    return out
