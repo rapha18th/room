@@ -29,13 +29,15 @@ _hits: dict[str, list[float]] = {}
 
 
 def limit(request: Request, per_min: int):
+    """Per IP and per endpoint, so a read and its dozen score calls count separately."""
     ip = (request.headers.get("x-forwarded-for") or request.client.host or "?").split(",")[0].strip()
+    key = f"{ip}|{request.url.path}"
     now = time.time()
-    recent = [t for t in _hits.get(ip, []) if now - t < 60]
+    recent = [t for t in _hits.get(key, []) if now - t < 60]
     if len(recent) >= per_min:
         raise HTTPException(429, "Easy. Give the room a minute.")
     recent.append(now)
-    _hits[ip] = recent
+    _hits[key] = recent
 
 
 @app.exception_handler(QlooError)

@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "readtheroom",
+    "site": "sozoroom",
     "public": "web",
     "ignore": ["firebase.json", "**/.*"],
     "rewrites": [
