@@ -362,7 +362,7 @@ export function createPitch(ctx) {
         const els = data.scene?.elements || [];
         const seen = els.map((e) => e.what).filter(Boolean).slice(0, 5);
         // A drawing must carry no marks: anything the reader names as a brand or a logo flags the frame.
-        const marked = els.filter((e) => e.kind === "brand" || e.name || /\b(logos?|branded|brand name|swoosh|emblem)\b/i.test(`${e.what} ${e.cue || ""}`));
+        const marked = els.filter((e) => e.kind === "brand" || e.name || /\b(logos?|branded|brand name|swoosh|emblem|lettering|handwritten|printed text|readable text)\b|['"“‘][^'"”’]{2,}['"”’]/i.test(`${e.what} ${e.cue || ""}`));
         P.visuals[id].read = seen;
         P.visuals[id].flag = marked.map((e) => e.what).slice(0, 2);
         trace("room", `The picture check reads: ${seen.join("; ") || "a quiet frame"}.`, since(t1));

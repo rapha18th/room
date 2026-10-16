@@ -837,7 +837,7 @@ async def pitch_draw(body: PitchIdeaIn, request: Request):
     limit(request, 2)
     p = _pitch(body)
     idea = body.idea.model_dump()
-    key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), 2)
+    key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), 3)
     if hit := await cache.get(key):
         return hit
     sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False
