@@ -87,6 +87,7 @@ ROLES = {
     "Wait": "Most of the city meets it as a stranger. Arrive later, with a bridge.",
     "Thin": "Qloo holds little here. Treat it as a test.",
 }
+OPEN_TOO = "The love runs strong here too. Open here as well."
 ROLE_ORDER = ["Open", "Build", "Inside", "Wait", "Thin"]
 
 
@@ -422,7 +423,7 @@ async def where(subjects: list[dict], cities: list[str], age: str | None) -> dic
     top = max((x["loved"] for x in out.values() if x["loved"] is not None and x["known"] >= 0.45), default=None)
     for c, x in out.items():
         x["role"] = role_of(x["known"], x["loved"], top)
-        x["line"] = ROLES[x["role"]]
+        x["line"] = OPEN_TOO if x["role"] == "Open" and x["loved"] != top else ROLES[x["role"]]
     order = sorted(out, key=lambda c: (ROLE_ORDER.index(out[c]["role"]), -(out[c]["loved"] or 0)))
     return {"cities": out, "order": order, "mapped": [s["entity"]["name"] for s in subjects[:2]]}
 

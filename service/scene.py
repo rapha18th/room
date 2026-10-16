@@ -604,7 +604,8 @@ def check(before: dict, after: dict, element_id: str, sport: str) -> dict:
     has = lambda b: bool(b) and len(b) == 4 and b[2] > b[0] and b[3] > b[1]
     product = (bool(has(ap.get("box_2d")) and iou(bp["box_2d"], ap["box_2d"]) > 0.5)) if has(bp.get("box_2d")) else None
     return {"ok": found == sport, "drew": sport, "found": found or (slot["what"] if slot else None),
-            "slot_now": slot["what"] if slot else None, "kept": kept, "of": len(others), "product": product}
+            "slot_now": slot["what"] if slot else None, "slot_id": slot["id"] if slot else None,
+            "kept": kept, "of": len(others), "product": product}
 
 
 # ---------- uploads ----------

@@ -284,13 +284,16 @@ export function createPicture(ctx) {
     status("Reading the new frame back…");
     ctx.render();
     try {
-      const after = fixed.scene || await readFrames(fixed.blob, null, false);
+      const read = fixed.scene || await readFrames(fixed.blob, null, false);
       if (gen !== pic.gen || pic.fixed !== fixed) return;
+      const ck = await ctx.api("/scene/check", { before: pic.scene, after: read, element_id: fixed.element_id, pick: fixed.pick.name });
+      if (gen !== pic.gen || pic.fixed !== fixed) return;
+      // The read-back confirms the sport in the redrawn slot: that slot now shows the property Room drew there.
+      const after = ck.ok && ck.slot_id
+        ? { ...read, elements: read.elements.map((e) => (e.id === ck.slot_id ? { ...e, name: fixed.pick.name } : e)) }
+        : read;
       fixed.scene = after;
-      const [ck, sc] = await Promise.all([
-        ctx.api("/scene/check", { before: pic.scene, after, element_id: fixed.element_id, pick: fixed.pick.name }),
-        score(after),
-      ]);
+      const sc = await score(after);
       if (gen !== pic.gen || pic.fixed !== fixed) return;
       fixed.check = ck;
       fixed.fit = sc.fit;
@@ -529,10 +532,12 @@ export function createPicture(ctx) {
     const ck = f.check;
     const after = f.fit?.scene_score?.[f.city];
     const before = f.before?.[f.city];
-    const product = ck?.product === true ? ", the product too" : ck?.product === false ? ". The product moved" : "";
+    const product = ck?.product === true ? ", and so did the product" : ck?.product === false ? ". The product moved" : "";
+    const held = !ck ? "" : ck.kept === ck.of ? (ck.of === 1 ? "The other element held" : `All ${ck.of} other elements held`)
+      : `${ck.kept} of ${ck.of} other elements held`;
     const readback = ck ? `<div class="card readback ${ck.ok ? "ok" : "miss"}"><p class="kicker">Read back</p>
         <p>Drew <b>${esc(ck.drew)}</b>. Room reads <b>${esc(ck.found || "something else")}</b>${ck.slot_now ? ` (${esc(ck.slot_now)})` : ""}.</p>
-        <p class="swhy">${ck.kept} of ${ck.of} other elements held${product}.</p></div>`
+        <p class="swhy">${held}${product}.</p></div>`
       : f.error ? `<div class="card readback miss"><p class="kicker">Read back</p><p class="swhy">${esc(f.error)}</p>
         <button class="ghost" type="button" data-act="pic-readback" ${pic.busy ? "disabled" : ""}>Read it back again</button></div>`
       : `<div class="card readback"><p class="kicker">Read back</p><p class="swhy working"><span class="dot"></span>Reading the new frame…</p></div>`;

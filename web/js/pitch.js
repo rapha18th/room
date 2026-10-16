@@ -746,7 +746,7 @@ export function createPitch(ctx) {
         ${traceHtml()}`;
     }
     const ctrl = control();
-    const words = P.threads.slice(0, 3).map((t) => cap(t.word));
+    const words = P.threads.slice(0, 3).map((t, i) => (i ? t.word : cap(t.word)));
     const head = words.length ? `${listing(words)}.` : `Fans of ${subjectName()}.`;
     const folded = LANES.filter(([k]) => ["thin", "noise"].includes(P.lanes[k]?.fold)).map(([, l]) => l);
     const failed = LANES.filter(([k]) => P.lanes[k]?.fold === "error").map(([, l]) => l);
