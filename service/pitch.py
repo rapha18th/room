@@ -1290,6 +1290,7 @@ def draw_prompt(idea: dict, pk: dict, kind: str) -> str:
             f"The moment: {capital(fill(idea.get('idea')))} The product: {PRODUCT.get(kind, PRODUCT['campaign'])}"
             f"{', the only drink in frame' if kind in ('drink', 'food') else ''}. "
             f"Mood: {mood or 'warm and real'}. People appear by role only: no celebrities, no recognisable faces. "
+            "Bare walls: no signs, neon, posters, menus or screens with words. "
             "Every garment, shoe, can and object is plain and unbranded: no swooshes, stripes, marks, emblems or logos, "
             "no brand names, no album or film titles, no readable text anywhere.")
 
