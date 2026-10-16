@@ -1,0 +1,10 @@
+{
+ "files": {
+  "gemini.jsonl": "e71aba7c86ce9953b2766282e3fef1e5e3012b5f1ceab23837201dc2ed5bbd4a",
+  "gemini_extra.jsonl": "eea1d960be5024e7fe720668e01d4863f4cffce661375b3c315c4850413ebb92",
+  "n4_panel.json": "e604cf172c8bbb44a81b6e30f13e80eb24e500eaab6b8bede672cb49a9860648",
+  "pairs_plan.json": "276a567148892ca9fd9e6826751a24bf4c0f693696f48b137ab16b0ad9fea004"
+ },
+ "heatmaps": 1295,
+ "heatmaps_sha256": "05b19775101afb24109f418d50d42ca358fd1f31a6540266914dd0b7338892c0"
+}
