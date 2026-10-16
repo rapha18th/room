@@ -321,6 +321,15 @@ All are pre-registered and labelled exploratory, and none ever leads the copy. U
      minimum detectable effect is about 15 points. Outcome A or B needs a large effect; C is the expected outcome
      otherwise, and the copy for C was written in advance (9.5).
 
+13. Post-run notes (written after scoring; none changes a figure)
+13.1 Transport: the first evaluation fetch at 07:05 UTC hit a truncated page; fetch.py gained retries (2.5) in a separate
+     commit and the fetch reran at 07:07 UTC on the same publication (every chart dated 2026-10-16; Liverpool dropped).
+13.2 Storage (deviation from 2.6): 40 Gemini attempts that failed and were retried (10 S3, 30 S4) were discarded unstored.
+     Bound: dropping the retried S4 runs moves S4 by 0.0002; S3L moves at most 0.012.
+13.3 Verification: three independent checks reproduced every P1 figure from the raw maps and answers, matched all 794
+     stored picks, and found the prompts, labels, coverage and balancing clean. Outcome C stands under every cluster
+     definition tried (one cluster per artist: gap 4.3 points, Holm 0.18). Results: RESULTS.md.
+
 CHANGES FROM THE DRAFT
 1. Cities resolve from a frozen PRESET table and name map, and Gemini gets "City, Country". All Apple city charts in the five countries are in by rule. San Juan is out, and the date rule removes stale charts, including Liverpool on dev data.
 2. The 15 Oct data becomes the dev snapshot. Evaluation uses a fresh fetch after a git-committed freeze, with hashes and three freeze points.

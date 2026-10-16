@@ -4,7 +4,7 @@
 
 Room reads a script, a stand-up set, a speech, an ad, a deck or a document. It finds every cultural reference and tells you, city by city and age by age, whether each one lands with the people in the seats. Then it works like a spellchecker for culture: for every reference that falls flat, it suggests a local swap that does the same job in the line, or a cut, and you accept or ignore each one. Take the set on tour and Room writes a version for every stop.
 
-Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Qloo knows taste. Room uses each for what it does best, and the benchmark below shows why.
+Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Loved comes from Qloo's taste graph. The two benchmarks below show where each one stands.
 
 ## Try it
 
@@ -44,6 +44,20 @@ Qloo publishes affinity, a measure of how strongly an entity relates to an audie
 | Clean artists | 18 | 67% | 67% | 100% | **100%** |
 
 Qloo's map places every brand. Its misses are artists with thin records: several African artists share one cluster map that peaks in Lagos, and the signal per square kilometre in Lagos, Nairobi and Johannesburg runs at a quarter of New York's. So Room asks Gemini who recognises a name, lets Qloo raise that wherever a solid record shows a real fan base, and takes Loved, age, swaps, tours and every rewrite from Qloo's taste graph. Rerun with `python benchmark/run.py`; every row is in [`benchmark/results.md`](benchmark/results.md).
+
+## Benchmark: the Taste pilot
+
+**Taste pilot, 16 October 2026.** Which of two cities in one country loves an artist more, judged by Apple Music city charts. On 48 artists in 30 clusters across 120 city pairs in the US, UK and Canada, Room's Qloo map scored 79.9% and Gemini asked directly scored 86.0%, a gap of 6.1 points (95% interval 0.3 to 12.7). Qloo covered 68% of eligible artists in those countries; counting every uncovered artist as a coin flip, Room's map scores 64.8% against Gemini's 80.8%. The result falls short of the bar we set in advance: Gemini's lead clears 5 points, and its Holm-corrected p of 0.072 sits above 0.05.
+
+| P1: US, UK, Canada | Score |
+|---|---|
+| Room's Qloo map (Loved) | 79.9% |
+| Gemini alone, Room's second opinion | 85.0% |
+| Gemini asked directly | 86.0% |
+| Qloo map and Gemini combined (exploratory) | 85.3% |
+| Null controls | 50.0% |
+
+Room's map beats every null control, so Qloo's heatmaps carry real local taste; Gemini reads it at least as well from memory. Item by item the two sit close (81.2% and 81.5%). The protocol was frozen in a public commit before the charts were fetched, and every prediction was hashed before scoring. Strata, caveats and every item: [`benchmark/taste/RESULTS.md`](benchmark/taste/RESULTS.md).
 
 ## Review: a spellchecker for culture
 
