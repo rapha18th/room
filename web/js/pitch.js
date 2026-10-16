@@ -770,7 +770,11 @@ export function createPitch(ctx) {
     P.receipt = id;
     ctx.render();
     requestAnimationFrame(() => {
-      if (matchMedia("(max-width: 960px)").matches) $("panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // The receipt opens at the top of the panel: bring it into view when the page sits below it.
+      const pan = $("panel");
+      if (pan && (matchMedia("(max-width: 960px)").matches || pan.getBoundingClientRect().top < 0)) {
+        pan.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       $("pitchReceipt")?.focus({ preventScroll: true });
     });
   }
@@ -779,7 +783,11 @@ export function createPitch(ctx) {
     const was = P.receipt;
     P.receipt = null;
     ctx.render();
-    if (was) requestAnimationFrame(() => document.querySelector(`#panel [data-item="${CSS.escape(was)}"]`)?.focus({ preventScroll: true }));
+    if (was) requestAnimationFrame(() => {
+      const el = document.querySelector(`#panel [data-item="${CSS.escape(was)}"]`);
+      el?.scrollIntoView({ block: "nearest" });
+      el?.focus({ preventScroll: true });
+    });
   }
 
   function onPanel(e) {

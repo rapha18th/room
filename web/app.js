@@ -1309,7 +1309,7 @@ function select(id) {
   state.selected = id;
   transition(render);
   focusSoon("#detailTitle");
-  if (innerWidth < 960) $("panel").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  if (innerWidth < 960 || $("panel").getBoundingClientRect().top < 0) $("panel").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
 
 function onPaper(target) {
