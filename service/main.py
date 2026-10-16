@@ -19,6 +19,7 @@ import docs  # noqa: E402
 import engine  # noqa: E402
 from cache import cache, Cache  # noqa: E402
 import llm  # noqa: E402
+import scene  # noqa: E402
 from qloo import QlooError  # noqa: E402
 
 import contextlib  # noqa: E402
@@ -61,16 +62,22 @@ READ_VERSION = 5  # bump when the extraction prompt changes
 _hits: dict[str, list[float]] = {}
 
 
+def client_ip(request: Request) -> str:
+    return (request.headers.get("x-forwarded-for") or request.client.host or "?").split(",")[0].strip()[:64]
+
+
 def limit(request: Request, per_min: int):
     """Per IP and per endpoint, so a read and its dozen score calls count separately."""
-    ip = (request.headers.get("x-forwarded-for") or request.client.host or "?").split(",")[0].strip()
-    key = f"{ip}|{request.url.path}"
+    key = f"{client_ip(request)}|{request.url.path}"
     now = time.time()
     recent = [t for t in _hits.get(key, []) if now - t < 60]
     if len(recent) >= per_min:
         raise HTTPException(429, "Easy. Give the room a minute.")
     recent.append(now)
     _hits[key] = recent
+    if len(_hits) > 20000:
+        for k in [k for k, v in _hits.items() if now - v[-1] > 60]:
+            del _hits[k]
 
 
 @app.exception_handler(QlooError)
@@ -283,6 +290,183 @@ async def doc_export(request: Request, file: UploadFile = File(...), changes: st
                                                    audience[:60])
     return Response(out, media_type=media,
                     headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
+
+
+# ---------- the picture check: frames in, verdicts per element per city, a fix redrawn in place ----------
+
+MAX_IMAGE = 8 * 1024 * 1024
+MAX_FRAMES = 16
+FIX_PER_HOUR = 12      # per visitor
+FIX_INSTANCE_HOUR = 40  # per instance, whatever the headers say
+FIX_DAY = 150          # across every instance (Firestore budget)
+_fix_hits: dict[str, list[float]] = {}
+_fix_all: list[float] = []
+_scene_jobs = asyncio.Semaphore(3)
+_fix_jobs = asyncio.Semaphore(1)
+_shrink_jobs = asyncio.Semaphore(4)
+
+
+async def _image(file: UploadFile) -> tuple[bytes, str]:
+    data = await file.read(MAX_IMAGE + 1)
+    if len(data) > MAX_IMAGE:
+        raise HTTPException(413, "Room reads pictures up to 8 MB.")
+    mime = scene.sniff(data)
+    if not mime:
+        raise HTTPException(415, "Room reads JPEG, PNG and WebP pictures.")
+    async with _shrink_jobs:
+        try:
+            return await asyncio.to_thread(scene.shrink, data, mime)
+        except ValueError as e:
+            raise HTTPException(413, str(e))
+        except Exception:
+            raise HTTPException(415, "Room could not open that picture.")
+
+
+def _read_key(items) -> str:
+    return Cache.key("scene_read", scene.frame_key(items), llm.MODEL)
+
+
+@app.post("/api/scene/read")
+async def scene_read(request: Request, file: UploadFile | None = File(None), frames: list[UploadFile] = File(default=[]),
+                     times: str = Form("[]"), keep: bool = Form(False)):
+    """One picture, or up to 16 frames sampled from a clip in the browser (each labelled with its time)."""
+    import json
+    limit(request, 8)
+    if len(frames) > MAX_FRAMES:
+        raise HTTPException(413, f"Room reads up to {MAX_FRAMES} frames from a clip.")
+    items = []
+    if file is not None:
+        data, mime = await _image(file)
+        items.append((data, mime, None))
+    try:
+        labels = [str(t)[:12] for t in json.loads(times)][:MAX_FRAMES]
+    except (ValueError, TypeError):
+        labels = []
+    for k, f in enumerate(frames):
+        data, mime = await _image(f)
+        items.append((data, mime, labels[k] if k < len(labels) else None))
+    if not items:
+        raise HTTPException(400, "Send a picture or frames from a clip.")
+    key = _read_key(items)
+    hit = await cache.get(key)
+    if hit:
+        return hit
+    async with _scene_jobs:
+        out = {"scene": await scene.read(items)}
+    # Only the built-in samples go to the shared cache; uploads stay in this instance's memory.
+    await cache.set(key, out, keep=keep)
+    return out
+
+
+class SceneEl(BaseModel):
+    id: str = Field("", max_length=8)
+    slot: str = Field("", max_length=40)
+    what: str = Field("", max_length=200)
+    kind: str = Field("", max_length=40)
+    sport: str = Field("", max_length=40)
+    name: str = Field("", max_length=120)
+    evokes: str = Field("", max_length=120)
+    cue: str = Field("", max_length=200)
+    box_2d: list[int] = Field(min_length=4, max_length=4)
+    prominence: float | None = None
+    t: str = Field("", max_length=24)
+
+
+class SceneProduct(BaseModel):
+    box_2d: list[int] = Field(default_factory=list, max_length=4)
+
+
+class SceneRead(BaseModel):
+    elements: list[SceneEl] = Field(max_length=scene.MAX_ELEMENTS)
+    product: SceneProduct = SceneProduct()
+
+
+class SceneFitIn(BaseModel):
+    brand: str = Field(min_length=1, max_length=80)
+    elements: list[SceneEl] = Field(max_length=scene.MAX_ELEMENTS)
+    cities: list[str] = Field(min_length=1, max_length=4)
+    age: str | None = None
+
+
+@app.post("/api/scene/fit")
+async def scene_fit(body: SceneFitIn, request: Request):
+    limit(request, 12)
+    check_age(body.age)
+    out = await scene.fit(body.brand.strip(), [e.model_dump() for e in body.elements],
+                          [c.strip()[:60] for c in body.cities], body.age)
+    if out.get("error"):
+        raise HTTPException(404, out["error"])
+    return out
+
+
+@app.post("/api/scene/fix")
+async def scene_fix(request: Request, file: UploadFile = File(...), element_id: str = Form("", max_length=8),
+                    box: str = Form(..., max_length=80), pick: str = Form(..., max_length=80)):
+    """Redraw only the flagged element's box with a catalog property's sport. Every word of the prompt comes from the
+    server: the element as Room read this picture, and the catalog's description of the sport."""
+    import json
+    limit(request, 3)
+    try:
+        b = [int(v) for v in json.loads(box)]
+        if len(b) != 4:
+            raise ValueError
+    except (ValueError, TypeError):
+        raise HTTPException(400, "box must be four numbers.")
+    p = await scene.prop(pick)
+    if not p:
+        raise HTTPException(400, "Room draws only the properties it scores.")
+    now = time.time()
+    ip = client_ip(request)
+    mine = [t for t in _fix_hits.get(ip, []) if now - t < 3600]
+    _fix_all[:] = [t for t in _fix_all if now - t < 3600]
+    if len(mine) >= FIX_PER_HOUR:
+        raise HTTPException(429, "Room redraws twelve pictures an hour per visitor.")
+    if len(_fix_all) >= FIX_INSTANCE_HOUR:
+        raise HTTPException(429, "Room is drawing for a crowd. Try again in a few minutes.")
+    data, mime = await _image(file)
+    key = _read_key([(data, mime, None)])
+    read = await cache.get(key)
+    if not read:
+        async with _scene_jobs:
+            read = {"scene": await scene.read([(data, mime, None)])}
+        await cache.set(key, read, keep=False)
+    el = scene.locate(read["scene"], element_id, b)
+    if not el:
+        raise HTTPException(409, "Room could not find that element in this picture.")
+    if not await cache.spend("fix", FIX_DAY):
+        raise HTTPException(429, "Room has drawn its share of pictures for today. The check itself still runs.")
+    _fix_hits[ip] = mine + [now]
+    _fix_all.append(now)
+    if len(_fix_hits) > 5000:
+        for k in [k for k, v in _fix_hits.items() if not v or now - v[-1] > 3600]:
+            del _fix_hits[k]
+    async with _fix_jobs:
+        try:
+            out = await asyncio.wait_for(scene.fix(data, mime, el, p["sport"]), 70)
+        except asyncio.TimeoutError:
+            raise HTTPException(504, "The redraw took too long. Try again.")
+        except RuntimeError as e:
+            raise HTTPException(502, str(e))
+    return {"image": scene.to_b64(out), "mime": scene.sniff(out) or "image/png", "element": el["id"],
+            "drew": p["sport"]}
+
+
+class SceneCheckIn(BaseModel):
+    before: SceneRead
+    after: SceneRead
+    element_id: str = Field(max_length=8)
+    pick: str = Field(max_length=80)
+
+
+@app.post("/api/scene/check")
+async def scene_check(body: SceneCheckIn, request: Request):
+    """Read-back: the redrawn slot shows the pick's sport, and the rest of the frame held."""
+    limit(request, 20)
+    p = await scene.prop(body.pick)
+    if not p:
+        raise HTTPException(400, "Room checks only the properties it scores.")
+    return await asyncio.to_thread(scene.check, body.before.model_dump(), body.after.model_dump(), body.element_id,
+                                   p["sport"])
 
 
 @app.get("/api/search")

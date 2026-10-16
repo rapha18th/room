@@ -24,3 +24,4 @@ spike/docs_proto.py
 web/_t.*
 benchmark/taste/data/*_stub.json
 benchmark/taste/data/*_incomplete.json
+spike/scene_*

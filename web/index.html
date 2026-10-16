@@ -25,7 +25,7 @@
       <button class="ghost" id="openBtn" type="button">Open a file</button>
       <button class="ghost kbd" id="paletteBtn" type="button"><span class="mod">⌘</span>K <span class="sr">commands</span></button>
       <button class="ghost" id="howBtn" type="button">How it reads</button>
-      <input id="fileInput" type="file" accept=".pdf,.pptx,.docx,.txt,.md,.markdown" hidden>
+      <input id="fileInput" type="file" accept=".pdf,.pptx,.docx,.txt,.md,.markdown,.jpg,.jpeg,.png,.webp,.mp4,.mov,.webm" hidden>
     </div>
   </header>
 
@@ -33,6 +33,12 @@
     <div class="seg modes" id="modes" role="group" aria-label="Mode">
       <button type="button" data-mode="room" aria-pressed="true">Room</button>
       <button type="button" data-mode="tour" aria-pressed="false">Tour</button>
+      <button type="button" data-mode="picture" aria-pressed="false">Picture</button>
+    </div>
+    <div class="group" id="pictureGroup" hidden>
+      <form id="brandForm" class="add brand" autocomplete="off">
+        <input id="brandInput" placeholder="Brand" aria-label="The brand in the frame" maxlength="80">
+      </form>
     </div>
     <div class="group" id="roomGroup">
       <div class="chips" id="chips"></div>
@@ -60,6 +66,7 @@
       </div>
       <textarea id="script" spellcheck="false" aria-label="Your script" placeholder="Paste a set, a script, a speech or an ad. Or drop a PDF, deck or document anywhere on the page."></textarea>
       <div id="read" class="read" hidden></div>
+      <div id="frame" class="frame" hidden></div>
       <div class="paper-foot">
         <span class="status" id="status" aria-live="polite"></span>
         <div class="actions">
@@ -79,7 +86,7 @@
     <a href="https://github.com/rapha18th/room" target="_blank" rel="noopener">Source</a>
   </footer>
 
-  <div class="dropzone" id="drop" hidden><p>Drop to read the room</p><small>PDF, PowerPoint, Word, text or Markdown</small></div>
+  <div class="dropzone" id="drop" hidden><p>Drop to read the room</p><small>PDF, PowerPoint, Word, text, Markdown, a picture or a clip</small></div>
   <div class="pop" id="pop" popover role="dialog" aria-label="Suggestion"></div>
   <div id="print" class="print" aria-hidden="true"></div>
 
@@ -97,6 +104,7 @@
       <li><b>Score.</b> Known is how much of a city recognises the reference: Gemini's estimate, raised wherever Qloo measures a real local fan base. Loved is Qloo's median affinity in that city, read for the age band you pick.</li>
       <li><b>Review.</b> For any city, an agent decides what to swap, what to drop and what to keep. Qloo finds local swaps and tests each one. You accept or ignore every suggestion, like a spellchecker for culture.</li>
       <li><b>Tour.</b> Give Room up to eight stops and it reviews the set for each one, then prints a set list per city.</li>
+      <li><b>Picture.</b> Drop a frame or a clip from an ad and name the brand. Gemini reads what is on the TV, in hand and on the wall. Qloo scores each element for the brand: how its fans lean against the average brand fan, who holds it in Qloo's brand records, and how each city feels about it. Room redraws a flagged element in place and reads the new frame back.</li>
     </ol>
     <dl class="legend" id="legend"></dl>
     <p class="keys"><kbd class="mod">⌘</kbd><kbd>K</kbd> commands · <kbd class="mod">⌘</kbd><kbd>↵</kbd> read · <kbd class="mod">⌘</kbd><kbd>Z</kbd> undo · in a review: <kbd>A</kbd> accept, <kbd>I</kbd> ignore, <kbd>J</kbd> <kbd>K</kbd> next and previous · <kbd>Esc</kbd> back. Letter keys work only while a suggestion, the paper or the panel has focus.</p>

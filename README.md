@@ -76,9 +76,23 @@ The room score counts up as you accept. The agent's full trace, every Qloo call 
 
 Give Room up to eight stops. It scores the set in every city, runs a review per stop, and fills a tour sheet: one column per city, one row per reference, each cell saying what stays, what swaps and what gets cut, with the room score before and after. Tap a stop and the paper shows that city's version; **Print set lists** gives one page per stop with every change marked. In one run of the launch ad, with Chick-fil-A accepted for Atlanta and the tour routed through Atlanta, Dallas, London, Lagos and Nairobi, London took its Nando's back (76% to 88%) and Lagos took KFC (80% to 92%). The same line, three cities, three local answers.
 
+## Picture: the check for frames and clips
+
+A frame is a script whose references are boxes. Switch to **Picture**, name the brand and drop a frame or a short clip from an ad. Gemini reads every cultural element a viewer would notice: what is on the TV, in hand, on a shirt or a wall. Qloo scores each one for the brand and for each city in the room with three signals:
+
+- **Lift.** How much more the brand's fans lean toward it than Coca-Cola's fans do (Room's mass-brand control): `GET /v2/insights?filter.type=urn:entity:brand&signal.interests.entities=<brand>&filter.results.entities=<every sports property>`, and the same call with Coca-Cola as the control. For Heineken's fans Formula One leads at +0.065 and the NFL sits at -0.056.
+- **Ownership.** Qloo's brand records carry partnership, competitor and similar-brand tags. Heineken holds Formula 1, the UEFA Champions League and the Rugby World Cup; Stella Artois holds Wimbledon; Bud Light holds the NFL, MLB and the UFC. Qloo lists the NFL for Coors Light as well: a brand's own partnership stays its ground, and Room names the competitor that shares it.
+- **City love.** Room's own Known and Loved per city, from one heatmap over the room, so every city sits on one scale. In the Lagos sample's room, Lagos loves the Champions League at 0.79; Dallas keeps it at 0.19 and loves the NFL at 0.54.
+
+Each element gets a verdict per city: *Fits* (with a *yours* badge when the brand holds it), *Rival's*, *Off-market* or *Off-brand*. A flagged element comes with the best local alternative: a property the city loves (Loved 0.45 or more), free of competitors' partnerships, that the brand's fans lean toward. The brand's own partnerships come first; then city love plus lift decides.
+
+**Redraw for a city** sends the frame to Gemini's image model with one instruction: change only that box. Room then reads the new frame back and confirms the slot now shows the pick and everything else held. On the Lagos sample, grass-court tennis on the bar's TV reads as Wimbledon, Stella Artois territory; Room redraws a floodlit Champions League night, Heineken's own partner, which Lagos loves at 0.79 in the sample's room, and the Lagos score goes from 0% to 100%. On the Dallas sample, the NFL on a backyard TV is Bud Light's own partnership: it fits in Dallas (0.54) and New York (0.69) and reads off-market in London and Lagos. One frame, two answers.
+
+Clips are sampled into up to 16 frames in the browser; each element carries its time span, and a flagged one gets a shot note. Sports on screen map to a pinned catalog of 24 properties (football, American football, basketball, baseball, ice hockey, tennis, golf, motor racing, cricket, rugby, MMA, wrestling). Gemini's stated sport routes each screen first; events Qloo files under their league or tour (Wimbledon, the Super Bowl, the Ryder Cup) map to the property behind them and keep their name for the ownership check. Every redraw prompt is built on the server from Room's own read of the frame and the catalog's description of the sport.
+
 ## Files: decks and documents in, corrected files out
 
-Drop or paste a PDF, PowerPoint (.pptx), Word (.docx), text or Markdown file anywhere on the page. Room reads slides, text boxes, tables and speaker notes, labels each block on the paper, and reviews it like any script. **Download** returns the file with the accepted changes written in:
+Drop or paste a PDF, PowerPoint (.pptx), Word (.docx), text or Markdown file anywhere on the page. A picture or a clip opens the picture check. Room reads slides, text boxes, tables and speaker notes, labels each block on the paper, and reviews it like any script. **Download** returns the file with the accepted changes written in:
 
 - **Word** comes back with tracked changes by "Room", each with a comment carrying its reason. Accept All gives the corrected text; Reject All gives the original. A Room-edited file opens again in Room for another pass.
 - **PowerPoint** gets its edits in place, with only the changed words moving, so a bold brand name stays bold. Each touched slide gets a change log in its speaker notes.
@@ -110,6 +124,7 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 | `find_swap(line, reference, kind, city, job_in_line?)` | Local equivalents that keep the reference's job, each scored |
 | `suggest_for_city(text, city, age?)` | Review a text for one city: swaps, cuts and keeps, returned as suggestions for you to apply |
 | `rewrite_for_city(text, city, also_check?, max_swaps?)` | The rewrite agent, run on the server, with its trace |
+| `check_scene(brand, cities, image_base64? or image_url?, age?)` | The picture check: every element in an ad frame, scored for the brand in each city, with the best local alternative |
 
 ## Qloo endpoints
 
@@ -118,6 +133,8 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 | `GET /search` | Reference to entity; city name to locality and boundary |
 | `GET /v2/insights` `filter.type=urn:heatmap` | Known and loved per city over the room polygon, with `signal.demographics.age` |
 | `GET /v2/insights` `filter.type=urn:entity:*` | Swap candidates by `signal.interests.entities` and by `filter.tags`, scoped with `signal.location` set to the city's own polygon |
+| `GET /search` `types=urn:entity:brand` | A brand's partnership, competitor and similar-brand tags, for ownership in the picture check |
+| `GET /v2/insights` `filter.results.entities` | The brand's audience affinity for each sports property, against Coca-Cola's audience: lift |
 
 ## A request, start to finish
 

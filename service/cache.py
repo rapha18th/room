@@ -17,6 +17,7 @@ TTL = 14 * 86400
 class Cache:
     def __init__(self):
         self.mem: dict[str, tuple[float, object]] = {}
+        self.counts: dict[str, int] = {}
         self.db = None
         self.disk = None
         name = os.environ.get("ROOM_FIRESTORE_DB")
@@ -74,6 +75,32 @@ class Cache:
                 )
             except Exception as e:
                 print(f"cache: write failed ({e})")
+
+
+    async def spend(self, name: str, cap: int) -> bool:
+        """Take one from a daily budget shared by every instance (Firestore), or held by this process in dev."""
+        k = f"{name}-{time.strftime('%Y%m%d', time.gmtime())}"
+        if not self.db:
+            n = self.counts.get(k, 0)
+            self.counts[k] = n + 1
+            return n < cap
+        from google.cloud import firestore
+        ref = self.db.collection("budget").document(k)
+
+        @firestore.transactional
+        def take(tx):
+            snap = ref.get(transaction=tx)
+            n = (snap.to_dict() or {}).get("n", 0) if snap.exists else 0
+            if n >= cap:
+                return False
+            tx.set(ref, {"n": n + 1, "t": time.time()})
+            return True
+
+        try:
+            return await asyncio.to_thread(take, self.db.transaction())
+        except Exception as e:  # a budget that cannot be read stays closed
+            print(f"cache: budget read failed ({e})")
+            return False
 
 
 cache = Cache()
