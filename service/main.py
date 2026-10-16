@@ -778,11 +778,7 @@ async def pitch_readback(body: PitchIdeasIn, request: Request):
         await _spend()
     out = await pitch.readback(p, ideas, _pins(body))
     if out["ideas"] and not out["tally"]["stalled"]:
-        clean = out["read"] is not None and not out["flag"]
-    # A sample keeps its first clean drawing, whatever take it came on, for every visitor after.
-    if sample and clean and not await cache.get(best):
-        await cache.set(best, out, keep=True)
-    await cache.set(key, out, keep=sample and clean)
+        await cache.set(key, out, keep=sample)
     return out
 
 
@@ -844,9 +840,10 @@ async def pitch_draw(body: PitchIdeaIn, request: Request):
     idea = body.idea.model_dump()
     key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), body.take, 3)
     best = Cache.key("pitch_draw_best", p, _core([idea]), _pins(body), 3)
-    if hit := await cache.get(key):
-        return hit
     if body.take == 0 and (hit := await cache.get(best)):
+        return hit
+    # A flagged frame is never served from the cache: the same take draws anew.
+    if (hit := await cache.get(key)) and not hit.get("flag"):
         return hit
     sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False
     now = time.time()
@@ -871,7 +868,11 @@ async def pitch_draw(body: PitchIdeaIn, request: Request):
             raise HTTPException(404, str(e))
         except RuntimeError as e:
             raise HTTPException(502, str(e))
-    await cache.set(key, out, keep=sample)
+    clean = out["read"] is not None and not out["flag"]
+    # A sample keeps its first clean drawing, whatever take it came on, for every visitor after.
+    if sample and clean and not await cache.get(best):
+        await cache.set(best, out, keep=True)
+    await cache.set(key, out, keep=sample and clean)
     return out
 
 
