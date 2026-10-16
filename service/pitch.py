@@ -1264,7 +1264,7 @@ PRODUCT = {"drink": "an unlabelled can of the drink in hand", "album": "a vinyl 
            "game": "a game controller in someone's hands", "book": "a plain hardcover book",
            "podcast": "two microphones on a table", "product": "the new product, unlabelled", "food": "the dish",
            "fashion": "clothes with no logos", "opening": "the room itself", "event": "the crowd", "campaign": "the product, unlabelled"}
-ROLE_WORDS = {"artist": "a musician", "person": "a guest", "brand": "a collaborator's goods, unbranded",
+ROLE_WORDS = {"artist": "a musician", "person": "a guest", "brand": "a collaborator",
               "podcast": "a podcast microphone setup", "tv_show": "a small film crew", "movie": "a cinematic look",
               "videogame": "a game-inspired look", "book": "a literary look", "destination": "a sense of travel"}
 
@@ -1282,11 +1282,12 @@ def draw_prompt(idea: dict, pk: dict, kind: str) -> str:
     words["city"] = idea.get("lead_city") or ""
     fill = lambda t: re.sub(r"\{(\w+)\}", lambda m: words.get(m.group(1), ""), t or "")
     venue = idea["slots"].get("venue")
-    setting = f"Setting: inside a {venue.get('one') or 'room'} in {venue.get('city')}." if venue else \
-        f"Setting: {idea.get('lead_city') or 'a city'} at night."
+    one = (venue or {}).get("one") or "room"
+    setting = (f"Setting: inside {'an' if one[:1] in 'aeiou' else 'a'} {one} in {venue.get('city')}." if venue
+               else f"Setting: {idea.get('lead_city') or 'a city'} at night.")
     mood = ", ".join(t["word"] for t in (pk.get("threads") or [])[:3])
     return (f"Photoreal key visual for an advertising campaign, 16:9, shot like a still from a film. {setting} "
-            f"The moment: {fill(idea.get('idea'))} The product: {PRODUCT.get(kind, PRODUCT['campaign'])}. "
+            f"The moment: {capital(fill(idea.get('idea')))} The product: {PRODUCT.get(kind, PRODUCT['campaign'])}. "
             f"Mood: {mood or 'warm and real'}. People appear by role only: no celebrities, no recognisable faces. "
             "Every garment, shoe, can and object is plain and unbranded: no swooshes, stripes, marks, emblems or logos, "
             "no brand names, no album or film titles, no readable text anywhere.")
