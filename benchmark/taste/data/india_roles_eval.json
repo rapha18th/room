@@ -1,0 +1,27 @@
+{
+ "snapshot": "eval",
+ "method": "two independent Claude reviewers, blind to every system output; a name is composer-only when both say so. Names already reviewed on the dev snapshot keep their dev decision; Dhanush and Jay Trak were reviewed for eval.",
+ "composer_only": [
+  "Amitabh Bhattacharya",
+  "Avvy Sra",
+  "Garvit - Priyansh",
+  "Gur Sidhu",
+  "Ikky",
+  "Irshad Kamil",
+  "Jay Trak",
+  "Kaptaan",
+  "Karthik Netha",
+  "Kasarla Shyam",
+  "MXRCI",
+  "Mithoon",
+  "Pritam",
+  "Prodbysoundscape",
+  "RXTRO",
+  "Sachin-Jigar",
+  "Shashwat Sachdev",
+  "Starboy X",
+  "Super Subu",
+  "Vishal & Shekhar",
+  "Vivek"
+ ]
+}

@@ -3,7 +3,7 @@
   python identity.py <snap> prepare          verdicts carried over by (artist ID, Qloo entity ID); the rest go to
                                              spike/out/taste/<snap>/identity_todo.json for the reviewer workflow
   python identity.py <snap> merge <output>   merge the workflow's output with the carried verdicts into
-                                             data/identity_<snap>.json and fill hometown blanks in data/items_<snap>.json
+                                             data/identity_<snap>.json; build.py then applies the hometown answers
 """
 
 import json
@@ -36,7 +36,8 @@ def main():
         dump(PRIVATE / SNAP / "identity_todo.json", todo)
         print(f"{len(inp)} matches; {len(inp) - len(todo)} carried over; {len(todo)} to review")
         return
-    out = load(sys.argv[3])
+    from pathlib import Path
+    out = load(Path(sys.argv[3]))
     out = out.get("result", out)
     verdicts = {}
     for x in inp:
@@ -54,15 +55,7 @@ def main():
     dump(DATA / f"identity_{SNAP}.json", {"snapshot": SNAP, "method": "two independent Claude reviewers per artist, blind "
                                           "to every system output; pass needs both; verdicts carry over when the "
                                           "Qloo entity is unchanged", "verdicts": verdicts, "hometowns": hometowns})
-    items = load(DATA / f"items_{SNAP}.json")
-    filled = 0
-    for it in items["items"]:
-        if it.get("home_metro") is None and it["artist_id"] in hometowns:
-            it["home_metro"] = metro(hometowns[it["artist_id"]])
-            it["hometown"] = it["home_metro"] in (it["gold"], it["other"])
-            filled += 1
-    dump(DATA / f"items_{SNAP}.json", items)
-    print(f"verdicts: {sum(v == 'pass' for v in verdicts.values())} pass of {len(verdicts)}; hometown blanks filled on {filled} items")
+    print(f"verdicts: {sum(v == 'pass' for v in verdicts.values())} pass of {len(verdicts)}; rerun build.py {SNAP} to apply hometowns")
 
 
 if __name__ == "__main__":
