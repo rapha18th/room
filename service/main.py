@@ -832,6 +832,10 @@ _draw_all: list[float] = []
 _draw_jobs = asyncio.Semaphore(2)
 
 
+def _read_clean(hit) -> bool:
+    return bool(hit) and hit.get("read") is not None and not hit.get("flag")
+
+
 @app.post("/api/pitch/draw")
 async def pitch_draw(body: PitchIdeaIn, request: Request):
     """A key visual for one idea, described only in Room's words (roles, rooms, mood), then read back in the browser."""
@@ -840,10 +844,10 @@ async def pitch_draw(body: PitchIdeaIn, request: Request):
     idea = body.idea.model_dump()
     key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), body.take, 3)
     best = Cache.key("pitch_draw_best", p, _core([idea]), _pins(body), 3)
-    if body.take == 0 and (hit := await cache.get(best)):
+    # The cache serves only drawings Room has read on the server and found clean; anything else draws anew.
+    if body.take == 0 and _read_clean(hit := await cache.get(best)):
         return hit
-    # A flagged frame is never served from the cache: the same take draws anew.
-    if (hit := await cache.get(key)) and not hit.get("flag"):
+    if _read_clean(hit := await cache.get(key)):
         return hit
     sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False
     now = time.time()
