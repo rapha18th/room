@@ -343,12 +343,22 @@ export function createPitch(ctx) {
     ctx.render();
     try {
       const t0 = performance.now();
-      const r = await api("/pitch/draw", { ...params(), idea, sample: P.sample, pins: P.pins.slice(0, 4) });
+      const take = P.visuals[id] ? (P.visuals[id].take || 0) + 1 : 0;
+      const r = await api("/pitch/draw", { ...params(), idea, sample: P.sample, pins: P.pins.slice(0, 4), take });
       if (gen !== P.gen) return;
       const blob = await (await fetch(`data:${r.mime};base64,${r.image}`)).blob();
       if (P.visuals[id]) URL.revokeObjectURL(P.visuals[id].url);
-      P.visuals[id] = { url: URL.createObjectURL(blob), blob, prompt: r.prompt, read: null };
+      P.visuals[id] = { url: URL.createObjectURL(blob), blob, prompt: r.prompt, read: r.read, flag: r.flag || [], take };
       trace("gemini", `Drew ${plainText(idea.title, idea)} from Room's description: rooms and roles, no names.`, since(t0));
+      if (r.read) {
+        trace("room", `The picture check reads: ${r.read.join("; ") || "a quiet frame"}.`);
+        if (r.flag?.length) trace("room", `It found a mark in the frame: ${r.flag[0]}. Draw again before using it.`);
+        status(r.flag?.length ? "Room found a mark in the frame. Draw again before you use it." : brandName() ? `Drawn and read back. Check it in Picture to score it for ${brandName()} city by city.` : "Drawn and read back.");
+        P.busy = "";
+        P.drawing = null;
+        ctx.render();
+        return;
+      }
       status("Reading the key visual back…");
       ctx.render();
       const f = new FormData();

@@ -562,6 +562,7 @@ class PitchIdeasIn(PitchParams):
 
 class PitchIdeaIn(PitchParams):
     sample: str = Field("", max_length=8)
+    take: int = Field(0, ge=0, le=99)
     idea: PitchIdea
     pins: list[PitchPin] = Field(default_factory=list, max_length=4)
 
@@ -777,7 +778,7 @@ async def pitch_readback(body: PitchIdeasIn, request: Request):
         await _spend()
     out = await pitch.readback(p, ideas, _pins(body))
     if out["ideas"] and not out["tally"]["stalled"]:
-        await cache.set(key, out, keep=sample)
+        await cache.set(key, out, keep=sample and out["read"] is not None and not out["flag"])
     return out
 
 
@@ -837,7 +838,7 @@ async def pitch_draw(body: PitchIdeaIn, request: Request):
     limit(request, 2)
     p = _pitch(body)
     idea = body.idea.model_dump()
-    key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), 3)
+    key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), body.take, 3)
     if hit := await cache.get(key):
         return hit
     sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False

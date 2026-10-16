@@ -1318,6 +1318,27 @@ async def draw(p: dict, idea: dict, pins: list[dict] | None = None) -> dict:
             if part.inline_data:
                 return part.inline_data.data
         raise RuntimeError("The image model returned no picture.")
+    t0 = time.time()
     data = await asyncio.to_thread(call)
     data, mime = await asyncio.to_thread(scene.shrink, data, scene.sniff(data) or "image/png", 1400)
-    return {"image": scene.to_b64(data), "mime": mime, "prompt": prompt}
+    out = {"image": scene.to_b64(data), "mime": mime, "prompt": prompt, "read": None, "flag": []}
+    # Room reads its own drawing back while there is time: anything the reader names as a brand, a logo or text
+    # flags the frame, and a flagged frame never enters the shared cache.
+    left = 50 - (time.time() - t0)
+    if left > 12:
+        try:
+            read = await asyncio.wait_for(scene.read([(data, mime, None)]), left)
+            els = read.get("elements") or []
+            out["read"] = [e.get("what") for e in els if e.get("what")][:5]
+            out["flag"] = [e.get("what") for e in els if marked(e)][:2]
+        except Exception:
+            pass
+    return out
+
+
+MARKS = re.compile(r"\b(logos?|branded|brand name|swoosh|emblem|lettering|handwritten|printed text|readable text)\b|"
+                   r"['\"\u201c\u2018][^'\"\u201d\u2019]{2,}['\"\u201d\u2019]", re.I)
+
+
+def marked(e: dict) -> bool:
+    return e.get("kind") == "brand" or bool(e.get("name")) or bool(MARKS.search(f"{e.get('what', '')} {e.get('cue', '')}"))
