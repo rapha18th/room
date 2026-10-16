@@ -66,7 +66,14 @@ _hits: dict[str, list[float]] = {}
 
 
 def client_ip(request: Request) -> str:
-    return (request.headers.get("x-forwarded-for") or request.client.host or "?").split(",")[0].strip()[:64]
+    """The caller as the last trusted hop saw it. Behind Firebase Hosting the header reads 'client, hosting-proxy'
+    (logged on Cloud Run), so the client sits second from the right; a direct call's client is the rightmost entry.
+    The leftmost entry is whatever the caller wrote, so it never counts. Per-instance caps back this up."""
+    hops = [h.strip() for h in (request.headers.get("x-forwarded-for") or "").split(",") if h.strip()]
+    if not hops:
+        return (request.client.host if request.client else "?")[:64]
+    hosted = "firebase hosting" in (request.headers.get("via") or "").lower()
+    return (hops[-2] if hosted and len(hops) >= 2 else hops[-1])[:64]
 
 
 def limit(request: Request, per_min: int):
@@ -813,6 +820,50 @@ async def pitch_rollout(body: PitchIdeaIn, request: Request):
     out = await pitch.rollout(p, idea, _pins(body))
     if out["beats"] and not out["stalled"]:
         await cache.set(key, out, keep=sample)
+    return out
+
+
+DRAW_PER_HOUR = 6      # per visitor
+DRAW_INSTANCE_HOUR = 30
+DRAW_DAY = 100
+_draw_hits: dict[str, list[float]] = {}
+_draw_all: list[float] = []
+_draw_jobs = asyncio.Semaphore(2)
+
+
+@app.post("/api/pitch/draw")
+async def pitch_draw(body: PitchIdeaIn, request: Request):
+    """A key visual for one idea, described only in Room's words (roles, rooms, mood), then read back in the browser."""
+    limit(request, 2)
+    p = _pitch(body)
+    idea = body.idea.model_dump()
+    key = Cache.key("pitch_draw", p, _core([idea]), _pins(body), 2)
+    if hit := await cache.get(key):
+        return hit
+    sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False
+    now = time.time()
+    ip = client_ip(request)
+    mine = [t for t in _draw_hits.get(ip, []) if now - t < 3600]
+    _draw_all[:] = [t for t in _draw_all if now - t < 3600]
+    if not sample:
+        if len(mine) >= DRAW_PER_HOUR:
+            raise HTTPException(429, "Room draws six key visuals an hour per visitor.")
+        if len(_draw_all) >= DRAW_INSTANCE_HOUR:
+            raise HTTPException(429, "Room is drawing for a crowd. Try again in a few minutes.")
+        if not await cache.spend("draw", DRAW_DAY):
+            raise HTTPException(429, "Room has drawn its share of key visuals for today. The samples still draw.")
+        _draw_hits[ip] = mine + [now]
+        _draw_all.append(now)
+    async with _draw_jobs:
+        try:
+            out = await asyncio.wait_for(pitch.draw(p, idea, _pins(body)), 56)
+        except asyncio.TimeoutError:
+            raise HTTPException(504, "The drawing took too long. Try again.")
+        except ValueError as e:
+            raise HTTPException(404, str(e))
+        except RuntimeError as e:
+            raise HTTPException(502, str(e))
+    await cache.set(key, out, keep=sample)
     return out
 
 

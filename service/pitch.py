@@ -1254,3 +1254,68 @@ async def rollout(p: dict, idea: dict, pins: list[dict] | None = None) -> dict:
     return {"beats": beats, "struck": struck, "cities": cities, "launch": pk["launch"],
             "roles": {c: wh["cities"][c]["role"] for c in cities}, "stalled": not read["ok"],
             "seconds": round(time.time() - t0, 1)}
+
+
+# ---------- draw it: a key visual for one idea, described only in Room's own words ----------
+
+PRODUCT = {"drink": "an unlabelled can of the drink in hand", "album": "a vinyl record in a plain sleeve",
+           "single": "headphones and a phone playing music", "tour": "a stage under warm lights",
+           "film": "a cinema screen glowing in the dark", "series": "a screen glowing in a dark room",
+           "game": "a game controller in someone's hands", "book": "a plain hardcover book",
+           "podcast": "two microphones on a table", "product": "the new product, unlabelled", "food": "the dish",
+           "fashion": "clothes with no logos", "opening": "the room itself", "event": "the crowd", "campaign": "the product, unlabelled"}
+ROLE_WORDS = {"artist": "a musician", "person": "a guest", "brand": "a collaborator's goods, unbranded",
+              "podcast": "a podcast microphone setup", "tv_show": "a small film crew", "movie": "a cinematic look",
+              "videogame": "a game-inspired look", "book": "a literary look", "destination": "a sense of travel"}
+
+
+def draw_prompt(idea: dict, pk: dict, kind: str) -> str:
+    """The scene in plain roles: every name becomes what it is (a musician, a record store in London), so the image
+    carries no real person, brand, logo or title."""
+    words = {}
+    for k, v in idea["slots"].items():
+        if v.get("lane") == "venue":
+            words[k] = f"the {v.get('one') or 'room'}"
+        else:
+            words[k] = ROLE_WORDS.get(v.get("lane"), "a guest")
+    words["subject"] = "the launch"
+    words["city"] = idea.get("lead_city") or ""
+    fill = lambda t: re.sub(r"\{(\w+)\}", lambda m: words.get(m.group(1), ""), t or "")
+    venue = idea["slots"].get("venue")
+    setting = f"Setting: inside a {venue.get('one') or 'room'} in {venue.get('city')}." if venue else \
+        f"Setting: {idea.get('lead_city') or 'a city'} at night."
+    mood = ", ".join(t["word"] for t in (pk.get("threads") or [])[:3])
+    return (f"Photoreal key visual for an advertising campaign, 16:9, shot like a still from a film. {setting} "
+            f"The moment: {fill(idea.get('idea'))} The product: {PRODUCT.get(kind, PRODUCT['campaign'])}. "
+            f"Mood: {mood or 'warm and real'}. People appear by role only: no celebrities, no recognisable faces. "
+            "Every garment, shoe, can and object is plain and unbranded: no swooshes, stripes, marks, emblems or logos, "
+            "no brand names, no album or film titles, no readable text anywhere.")
+
+
+async def draw(p: dict, idea: dict, pins: list[dict] | None = None) -> dict:
+    """One image from the idea, rebuilt from the pack. Returns a JPEG and the exact words the image model read."""
+    from google.genai import types
+    pk = await pack(p, pins)
+    recs = {**pk["items"], **pk["venue_items"]}
+    slots = {k: recs[v["id"]] for k, v in (idea.get("slots") or {}).items()
+             if k in SLOT_LABEL and isinstance(v, dict) and v.get("id") in recs}
+    if len(slots) < 2:
+        raise ValueError("That idea sits outside this pitch.")
+    cities = pk["where"]["order"]
+    rebuilt = {"slots": slots, "idea": str(idea.get("idea", ""))[:600],
+               "lead_city": _lead_city(str(idea.get("lead_city") or ""), slots, cities)}
+    rebuilt["idea"] = clean(rebuilt["idea"], set(slots), _allowed_words(pk, cities), [])
+    prompt = draw_prompt(rebuilt, pk, p.get("kind") or "campaign")
+
+    def call():
+        r = llm.client().models.generate_content(
+            model=scene.IMAGE_MODEL, contents=[prompt],
+            config=types.GenerateContentConfig(response_modalities=["IMAGE"], image_config=types.ImageConfig(aspect_ratio="16:9"),
+                                               http_options=types.HttpOptions(timeout=50_000)))
+        for part in (r.candidates[0].content.parts if r.candidates and r.candidates[0].content else []):
+            if part.inline_data:
+                return part.inline_data.data
+        raise RuntimeError("The image model returned no picture.")
+    data = await asyncio.to_thread(call)
+    data, mime = await asyncio.to_thread(scene.shrink, data, scene.sniff(data) or "image/png", 1400)
+    return {"image": scene.to_b64(data), "mime": mime, "prompt": prompt}

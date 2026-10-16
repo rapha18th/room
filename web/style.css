@@ -619,3 +619,14 @@ button.bc:hover { background: #e2d8c5; }
 .rollout:focus { outline: none; }
 .samples button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 @media (prefers-reduced-motion: reduce) { .sd.wait i, .ghost-chip { animation: none; } }
+
+/* Pitch: the key visual on an idea card */
+.kv { margin: 0 0 12px; border-radius: 10px; overflow: hidden; background: var(--paper-2); }
+.kv img { display: block; width: 100%; height: auto; }
+.kv.wait { padding: 26px 16px; }
+.kv figcaption { padding: 8px 12px 10px; font-size: 12.5px; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.kv figcaption .who { font: 650 10px var(--sans); letter-spacing: .1em; text-transform: uppercase; color: #2a7d72; }
+.kvacts { display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.kvwhy summary { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.kvwhy p { margin: 6px 0 0; font: 12px/1.5 var(--keys); color: var(--ink-soft); }
+.kvflag { flex-basis: 100%; color: #a3412f; }

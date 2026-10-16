@@ -116,6 +116,13 @@ const pitch = createPitch({
   render: () => render(), saveBrief: (t) => store.set("brief", t),
   print: (html) => { $("print").innerHTML = html; window.print(); },
   useText: (text, slug, opts) => useText(text, slug, opts),
+  // A key visual goes to the picture check, read for the launching brand in the pitch's cities.
+  toPicture: (blob, brand, cities) => {
+    setTab("picture");
+    setPicCities(cities.slice(0, MAX_CITIES));
+    pic.state.brand = brand;
+    pic.open(new File([blob], "key-visual.jpg", { type: "image/jpeg" }));
+  },
 });
 const activeCities = () => (state.tab === "picture" ? state.picCities : state.tab === "pitch" ? state.pitchCities : state.cities);
 

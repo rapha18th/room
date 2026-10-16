@@ -19,7 +19,7 @@ const VERD = { lands: "lands", roast: "roast", inside: "inside", dies: "dies", f
 const KILL = ["Taken", "One city", "Thin", "Obvious", "Off-brief"];
 const WHO = { you: "You", gemini: "Gemini", qloo: "Qloo", room: "Room" };
 const COUNT = ["No ideas", "One idea", "Two ideas", "Three ideas"];
-const LIVE = new Set(["brief", "lanes", "where", "venues", "write", "readback", "whatif", "rollout"]);
+const LIVE = new Set(["brief", "lanes", "where", "venues", "write", "readback", "whatif", "rollout", "draw"]);
 
 const fmt = (x) => (x == null ? "" : `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(3)}`);
 const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -40,7 +40,7 @@ export function createPitch(ctx) {
     brief: null, subjects: [], picking: null, lanes: {}, threads: [], marks: {}, where: null, venues: {}, age: null,
     ideas: [], kept: [], killed: [], launch: "", strips: {}, rollout: null, rolloutFor: null, rolling: null,
     trace: [], traceOpen: null, answer: null, tone: "", pins: [], pinNames: {}, raw: false, receipt: null,
-    killing: null, stale: "", note: "",
+    killing: null, stale: "", note: "", visuals: {}, drawing: null,
   };
 
   const status = (m) => { P.statusLine = m || ""; ctx.status(m); };
@@ -64,7 +64,9 @@ export function createPitch(ctx) {
   function clearResults() {
     Object.assign(P, { lanes: {}, threads: [], marks: {}, where: null, venues: {}, ideas: [], kept: [], killed: [],
       launch: "", strips: {}, rollout: null, rolloutFor: null, rolling: null, answer: null, tone: "", pins: [],
-      pinNames: {}, receipt: null, killing: null, error: "", stale: "", note: "", traceOpen: null });
+      pinNames: {}, receipt: null, killing: null, error: "", stale: "", note: "", traceOpen: null, drawing: null });
+    for (const v of Object.values(P.visuals)) URL.revokeObjectURL(v.url);
+    P.visuals = {};
   }
 
   // The footer's one button: Again for the brief already read, Pitch it for a new one.
@@ -331,6 +333,51 @@ export function createPitch(ctx) {
     requestAnimationFrame(() => document.getElementById("rollout")?.focus({ preventScroll: false }));
   }
 
+  // Draw it: a key visual for the idea, described only in Room's words, then read back by the picture check.
+  async function drawIt(id) {
+    const idea = P.ideas.find((i) => i.id === id);
+    if (!idea || working()) return;
+    const gen = P.gen;
+    Object.assign(P, { busy: "draw", drawing: id });
+    status(`Drawing ${plainText(idea.title, idea)}…`);
+    ctx.render();
+    try {
+      const t0 = performance.now();
+      const r = await api("/pitch/draw", { ...params(), idea, sample: P.sample, pins: P.pins.slice(0, 4) });
+      if (gen !== P.gen) return;
+      const blob = await (await fetch(`data:${r.mime};base64,${r.image}`)).blob();
+      if (P.visuals[id]) URL.revokeObjectURL(P.visuals[id].url);
+      P.visuals[id] = { url: URL.createObjectURL(blob), blob, prompt: r.prompt, read: null };
+      trace("gemini", `Drew ${plainText(idea.title, idea)} from Room's description: rooms and roles, no names.`, since(t0));
+      status("Reading the key visual back…");
+      ctx.render();
+      const f = new FormData();
+      f.append("file", blob, "key-visual.jpg");
+      f.append("keep", "false");
+      const t1 = performance.now();
+      const res = await fetch("/api/scene/read", { method: "POST", body: f });
+      const data = await res.json().catch(() => ({}));
+      if (gen !== P.gen || !P.visuals[id]) return;
+      if (res.ok) {
+        const els = data.scene?.elements || [];
+        const seen = els.map((e) => e.what).filter(Boolean).slice(0, 5);
+        // A drawing must carry no marks: anything the reader names as a brand or a logo flags the frame.
+        const marked = els.filter((e) => e.kind === "brand" || e.name || /\b(logos?|branded|brand name|swoosh|emblem)\b/i.test(`${e.what} ${e.cue || ""}`));
+        P.visuals[id].read = seen;
+        P.visuals[id].flag = marked.map((e) => e.what).slice(0, 2);
+        trace("room", `The picture check reads: ${seen.join("; ") || "a quiet frame"}.`, since(t1));
+        if (marked.length) trace("room", `It found a mark in the frame: ${marked[0].what}. Draw again before using it.`);
+      }
+      status(brandName() ? `Drawn. Check it in Picture to score it for ${brandName()} city by city.` : "Drawn and read back.");
+    } catch (err) {
+      if (gen === P.gen) status(err.message);
+    }
+    if (gen === P.gen) { P.busy = ""; P.drawing = null; }
+    ctx.render();
+  }
+
+  const brandName = () => resolved().find((s) => s.type === "brand" && s.role !== "comp")?.match.name || "";
+
   // The room changed (cities or age). A first run carries on into the room as it stands; ideas wait for Again.
   async function roomChanged({ age = false } = {}) {
     if (!P.brief || !resolved().length) return;
@@ -481,6 +528,7 @@ export function createPitch(ctx) {
     const id = esc(idea.id);
     return `<article class="idea${kept ? " is-kept" : ""}${idea.unread ? " unread" : ""}" data-idea="${id}">
       <p class="idea-k">Idea ${n}${idea.threads?.length ? ` · ${esc(idea.threads.join(", "))}` : ""}${kept ? ` · <span class="kepttag">Kept</span>` : ""}${idea.unread ? ` · <span class="unreadtag">Unread</span>` : ""}</p>
+      ${visualHtml(idea)}
       <h3 class="idea-t">${prose(idea.title, idea)}</h3>
       <p class="idea-line">${prose(idea.line, idea)}</p>
       ${idea.insight ? `<p class="idea-ins"><span>The truth</span>${prose(idea.insight, idea)}</p>` : ""}
@@ -493,9 +541,22 @@ export function createPitch(ctx) {
         <button type="button" class="ghost dark" id="keep-${id}" data-act="${kept ? "unkeep" : "keep"}" aria-pressed="${kept}">${kept ? "Kept" : "Keep"}</button>
         <button type="button" class="ghost dark" id="kill-${id}" data-act="kill">Kill</button>
         <button type="button" class="ghost dark" id="roll-${id}" data-act="roll" ${busy ? "disabled" : ""}>${P.rolling === idea.id ? "Rolling out…" : "Roll it out"}</button>
+        <button type="button" class="ghost dark" id="draw-${id}" data-act="draw" ${busy ? "disabled" : ""}>${P.drawing === idea.id ? "Drawing…" : P.visuals[idea.id] ? "Draw again" : "Draw it"}</button>
         <button type="button" class="ghost dark" id="use-${id}" data-act="use" ${busy ? "disabled" : ""} title="Send the idea to the paper and check every reference city by city">Check the copy</button>
       </div>`}
     </article>`;
+  }
+
+  function visualHtml(idea) {
+    const v = P.visuals[idea.id];
+    if (!v) return P.drawing === idea.id ? `<div class="kv wait"><p class="pwork"><span class="dot"></span>Drawing the key visual…</p></div>` : "";
+    const id = esc(idea.id);
+    return `<figure class="kv"><img src="${v.url}" alt="Key visual for ${esc(plainText(idea.title, idea))}">
+      <figcaption>${v.read ? `<span class="who">Room reads</span> ${esc(v.read.join("; ") || "a quiet frame")}` : `<span class="pwork"><span class="dot"></span>Reading it back…</span>`}
+        ${v.flag?.length ? `<span class="kvflag">Room found a mark in the frame: ${esc(v.flag.join("; "))}. Draw again before you use it.</span>` : ""}
+        <span class="kvacts">${brandName() ? `<button type="button" class="linkbtn" id="pic-${id}" data-act="topicture">Check it in Picture</button>` : ""}
+        <button type="button" class="linkbtn" id="dl-${id}" data-act="kvdownload">Download</button>
+        <details class="kvwhy"><summary>What Room asked for</summary><p>${esc(v.prompt)}</p></details></span></figcaption></figure>`;
   }
 
   function rolloutHtml() {
@@ -572,7 +633,7 @@ export function createPitch(ctx) {
     if (box.dataset.shown !== P.text) { box.value = P.text; box.dataset.shown = P.text; }
     const busy = working();
     const wait = { brief: "Reading the brief", lanes: "Reading who loves it", where: "Mapping the fans", venues: "Finding their rooms",
-      write: "Writing the ideas", readback: "Reading the ideas back", whatif: "Asking Qloo" }[P.busy];
+      write: "Writing the ideas", readback: "Reading the ideas back", whatif: "Asking Qloo", draw: "Drawing the key visual" }[P.busy];
     const n = P.ideas.length;
     $("pitchBody").innerHTML = `
       ${chipsHtml()}
@@ -775,6 +836,17 @@ export function createPitch(ctx) {
         }
         return;
       case "reread": if (idea) rereadIdea(idea.id); return;
+      case "draw": if (idea) drawIt(idea.id); return;
+      case "topicture": if (idea && P.visuals[idea.id]) ctx.toPicture(P.visuals[idea.id].blob, brandName(), ctx.cities()); return;
+      case "kvdownload": {
+        const v = idea && P.visuals[idea.id];
+        if (!v) return;
+        const a = document.createElement("a");
+        a.href = v.url;
+        a.download = `${plainText(idea.title, idea).replace(/[^\w .-]+/g, "").trim() || "key visual"} (Room).jpg`;
+        a.click();
+        return;
+      }
       case "roll": if (idea) rollOut(idea.id); return;
       case "use": if (idea) ctx.useText(idea.text || plainText(`${idea.title}. ${idea.line}\n${idea.insight} ${idea.idea}`, idea), P.slug, { cities: ctx.cities() }); return;
       case "tour": {
