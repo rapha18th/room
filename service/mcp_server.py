@@ -1,6 +1,8 @@
 """Room as an MCP server, so any agent can read the room mid-task.
 
-Mounted on the API at /mcp (streamable HTTP, stateless). Four tools:
+Mounted on the API at /mcp (streamable HTTP, stateless). Tools:
+  pitch              a launch brief in, up to three ideas built only from what its audience loves out, each name with its lift
+  read_audience      what fans of one thing love more than a household name's fans do, across nine kinds of culture
   read_room          every reference in a text, scored per city
   score_reference    one reference across a room
   find_swap          local equivalents for a reference that keep its job in the line
@@ -19,6 +21,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 import agent
 import engine
 import llm
+import pitch as pitching
 import scene
 from cache import Cache, cache
 
@@ -26,6 +29,10 @@ server = MCPServer(
     name="Room",
     title="Room: read the room before you walk in",
     instructions=(
+        "Use pitch when you hold a launch brief (a product, an album, a film, a game, a book, an opening) and need "
+        "ideas grounded in what its audience loves: it returns up to three ideas whose names are Qloo records with their "
+        "lift. Use read_audience to see what fans of one thing love more than fans of a household name of the same "
+        "kind do. "
         "Room checks cultural references (brands, artists, shows, films, people, places, teams) against a "
         "live audience in specific cities, using Qloo's taste graph. Use read_room on a draft before it goes "
         "to an audience, score_reference for a single name, find_swap when a reference dies in a city, and "
@@ -309,6 +316,111 @@ async def check_scene(brand: str, cities: list[str], image_base64: str = "", ima
                            "show_instead": (v.get("pick") or {}).get("name")} for c, v in (e.get("cities") or {}).items()},
         } for e in fit["elements"] if e.get("route") != "off_graph"],
         "also_in_frame": [e.get("what") for e in fit["elements"] if e.get("route") == "off_graph"],
+    }
+
+
+PITCH_HOUR = 20     # per instance
+READ_HOUR = 60      # per instance, for read_audience
+PITCH_DAY = 200     # across every instance (Firestore budget)
+_calls: dict[str, list[float]] = {}
+
+
+def _age(age: str | None) -> str | None:
+    bands = [a.strip() for a in (age or "")[:80].split(",") if a.strip()]
+    if any(a not in engine.AGES for a in bands):
+        raise ToolError("age must be one or more of " + ", ".join(engine.AGES))
+    return ",".join(bands) or None
+
+
+def _slow_down(bucket: str, per_hour: int):
+    now = time.time()
+    xs = [t for t in _calls.get(bucket, []) if now - t < 3600]
+    if len(xs) >= per_hour:
+        raise ToolError("Room is pitching for a crowd. Try again in a few minutes.")
+    _calls[bucket] = xs + [now]
+
+
+@server.tool(description="Read an audience the way Qloo sees it: what fans of one brand, artist, film, show, book, game, "
+                         "podcast, person or destination love more than fans of a household name of the same kind do "
+                         "(the lift), across music, shows, films, podcasts, brands, people, games, books and travel, with "
+                         "the taste words that run through those loves. kind is optional (artist, brand, movie, tv_show, "
+                         "book, videogame, podcast, person, destination).")
+async def read_audience(subject: str, kind: str = "", age: str | None = None) -> dict:
+    subject = (subject or "").strip()[:120]
+    if not subject:
+        raise ToolError("Give a subject")
+    age = _age(age)
+    _slow_down("read", READ_HOUR)
+    etype = kind if kind in engine.TYPES and kind != "place" else None
+    if etype:
+        m, etype = await pitching.resolve_any(subject, etype)
+        hit = m.get("match")
+    else:
+        hits = [h for h in await engine.search(subject, None) if h.get("type") in engine.TYPES and h.get("type") != "place"
+                and engine.match_quality(subject, h["name"]) >= engine.MIN_MATCH]
+        hit = hits[0] if hits else None
+        etype = hit.get("type") if hit else None
+    if not hit:
+        raise ToolError(f"{subject} is new to Qloo")
+    ls = await pitching.lanes([hit["entity_id"]], etype, age, [hit["name"]])
+    th = await pitching.threads(ls, age)
+    ctrl = ls[0]["control"]
+    return {
+        "subject": hit["name"], "type": etype, "measured_against": f"{ctrl['name']}'s fans",
+        "loves": {l["label"]: [{"name": r["name"], "lift": r["lift"]} for r in l["rows"] if r.get("lift") is not None][:6]
+                  for l in ls if not l["fold"]},
+        "folded": [l["label"] for l in ls if l["fold"]],
+        "threads": [t["word"] for t in th],
+        "note": "Lift is the subject's fans' affinity minus the affinity of fans of a household name of the same kind, "
+                "on the same list, from Qloo.",
+    }
+
+
+@server.tool(description="Pitch a launch. Give a one-line brief (what is launching, for whom, where), for example 'A debut "
+                         "album for fans of SZA and Daniel Caesar. London, Atlanta, Lagos.' Room reads who loves it with "
+                         "Qloo, maps where those fans are and the rooms they gather in, and returns up to three ideas built "
+                         "only from those names, read back by Room's script reader. Every artist, brand, show, film, book, "
+                         "game, podcast and room in an idea is a Qloo record: cultural names carry their lift, rooms their "
+                         "city. The words are Gemini's. Cities override the brief's; up to four.")
+async def pitch(brief: str, cities: list[str] | None = None, age: str | None = None) -> dict:
+    brief = (brief or "").strip()[:2000]
+    if len(brief) < 3:
+        raise ToolError("Give a one-line brief")
+    age = _age(age)
+    t0 = time.time()
+    b = await pitching.brief_cached(brief)
+    p = pitching.params_from(b)
+    if not p["subjects"]:
+        raise ToolError(f"{b['subjects'][0]['name'] if b['subjects'] else 'Every name in this brief'} is new to Qloo. "
+                        "Name what its people already love: 'for fans of ...'")
+    if cities:
+        p["cities"] = [c[:60] for c in _cities(cities)]
+    p["cities"] = p["cities"] or ["New York", "London"]
+    p["age"] = pitching.norm_age(age or p["age"], p["alcohol"])
+    key = pitching.mcp_key(p)
+    # A finished or running pitch costs nothing: the hourly slot and the daily budget pay for new work only.
+    if not (await cache.get(key) or key in pitching._inflight):
+        _slow_down("pitch", PITCH_HOUR)
+        if not await cache.spend("mcp_pitch", PITCH_DAY):
+            raise ToolError("Room has pitched its share for today")
+    try:
+        out = await asyncio.wait_for(asyncio.shield(pitching.write_cached(p, keep=bool(b.get("sample")))),
+                                     max(15.0, 54 - (time.time() - t0)))
+    except asyncio.TimeoutError:
+        raise ToolError("Room is still writing this pitch. Call pitch again with the same brief in about thirty seconds; "
+                        "the same server usually has it ready.")
+    pk = await pitching.pack(p)
+    return {
+        "launch": out["launch"], "measured_against": f"{pk['control']['name']}'s fans",
+        "cities": {c: {"role": pk["where"]["cities"][c]["role"], "why": pk["where"]["cities"][c]["line"]} for c in pk["where"]["order"]},
+        "cities_source": "Known is Gemini's estimate with a Qloo floor; Loved is Qloo's heatmap.",
+        "threads": [t["word"] for t in pk["threads"]],
+        "ideas": [{"title": pitching.filler(i, pk)(i["title"]), "text": i["text"], "lead_city": i["lead_city"],
+                   "names": {pitching.SLOT_LABEL[k]: {"name": v["name"], "lift": v.get("lift"), "city": v.get("city")}
+                             for k, v in i["slots"].items()}} for i in out["ideas"]],
+        "read_back": out.get("tally"),
+        "note": out.get("note") or "Room's proposals, built from audience signals. Names and lifts from Qloo; words from Gemini.",
+        **({"age_note": pitching.ALCOHOL_NOTE} if p["alcohol"] else {}),
     }
 
 

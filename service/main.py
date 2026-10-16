@@ -12,6 +12,8 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile  # noqa: E402
 from fastapi.responses import JSONResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
+from typing import Annotated, Literal  # noqa: E402
+
 from pydantic import BaseModel, Field  # noqa: E402
 
 import agent  # noqa: E402
@@ -19,6 +21,7 @@ import docs  # noqa: E402
 import engine  # noqa: E402
 from cache import cache, Cache  # noqa: E402
 import llm  # noqa: E402
+import pitch  # noqa: E402
 import scene  # noqa: E402
 from qloo import QlooError  # noqa: E402
 
@@ -469,9 +472,354 @@ async def scene_check(body: SceneCheckIn, request: Request):
                                    p["sport"])
 
 
+# ---------- Pitch: a brief in, the audience's world and three grounded ideas out ----------
+
+WRITE_DAY = 800   # writer, read-back and rollout calls across every instance per day
+READ_DAY = 3000   # brief and what-if reads across every instance per day
+PITCH_BODY = 64 * 1024
+_pitch_hour: dict[str, list[float]] = {}
+# Per instance, whatever the headers say: the per-IP limiter keys on a header a caller can write.
+PITCH_INSTANCE_HOUR = {"brief": 240, "whatif": 240, "write": 180, "readback": 180, "rollout": 120, "qloo": 1200}
+
+Short = Annotated[str, Field(max_length=60)]
+Note = Annotated[str, Field(max_length=160)]
+
+
+class PitchBriefIn(BaseModel):
+    text: str = Field(min_length=3, max_length=2000)
+
+
+class PitchSubject(BaseModel):
+    id: str = Field("", max_length=64)
+    type: str = Field(max_length=16)
+    name: str = Field(min_length=1, max_length=120)
+    role: str = Field("subject", max_length=8)
+
+
+class PitchParams(BaseModel):
+    subjects: list[PitchSubject] = Field(min_length=1, max_length=3)
+    cities: list[Short] = Field(min_length=1, max_length=4)
+    age: str | None = Field(None, max_length=80)
+    categories: list[Annotated[str, Field(max_length=32)]] = Field(default_factory=list, max_length=4)
+    kind: str = Field("campaign", max_length=16)
+    news: str = Field("", max_length=80)
+    when: str = Field("", max_length=40)
+    avoid: list[Short] = Field(default_factory=list, max_length=5)
+    alcohol: bool = False
+
+
+class PitchLaneIn(PitchParams):
+    lane: str = Field(max_length=16)
+
+
+class PitchCityIn(PitchParams):
+    city: str = Field(min_length=1, max_length=60)
+
+
+class PitchPin(BaseModel):
+    id: str = Field(max_length=64)
+    lane: str = Field(max_length=16)
+
+
+class SlotRef(BaseModel):
+    id: str = Field(max_length=64)
+
+
+class PitchIdea(BaseModel):
+    id: str = Field("", max_length=24)
+    title: str = Field("", max_length=600)
+    line: str = Field("", max_length=600)
+    insight: str = Field("", max_length=600)
+    idea: str = Field("", max_length=600)
+    slots: dict[Literal["partner", "venue", "media", "sound", "look"], SlotRef] = Field(default_factory=dict)
+    threads: list[Annotated[str, Field(max_length=30)]] = Field(default_factory=list, max_length=2)
+    lead_city: str = Field("", max_length=60)
+
+
+class PitchWriteIn(PitchParams):
+    sample: str = Field("", max_length=8)
+    seed: int = Field(0, ge=0, le=999)
+    kept: list[Note] = Field(default_factory=list, max_length=3)
+    killed: list[Note] = Field(default_factory=list, max_length=6)
+    answer: str = Field("", max_length=400)
+    tone: str = Field("", max_length=160)
+    pins: list[PitchPin] = Field(default_factory=list, max_length=4)
+
+
+class PitchIdeasIn(PitchParams):
+    sample: str = Field("", max_length=8)
+    seed: int = Field(0, ge=0, le=999)
+    ideas: list[PitchIdea] = Field(min_length=1, max_length=3)
+    pins: list[PitchPin] = Field(default_factory=list, max_length=4)
+
+
+class PitchIdeaIn(PitchParams):
+    sample: str = Field("", max_length=8)
+    idea: PitchIdea
+    pins: list[PitchPin] = Field(default_factory=list, max_length=4)
+
+
+class PitchItemIn(PitchParams):
+    id: str = Field(max_length=64)
+    pins: list[PitchPin] = Field(default_factory=list, max_length=4)
+
+
+class PitchWhatIfIn(PitchParams):
+    text: str = Field(min_length=1, max_length=200)
+
+
+class _PitchBodyCap:
+    """Pitch bodies are small JSON. Read each one up to the cap as it streams (a chunked request carries no
+    Content-Length), then hand it on."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not scope["path"].startswith("/api/pitch/"):
+            await self.inner(scope, receive, send)
+            return
+        too_big = JSONResponse({"detail": "That request is too large."}, status_code=413)
+        if any(k == b"content-length" and int(v or 0) > PITCH_BODY for k, v in scope.get("headers", [])):
+            await too_big(scope, receive, send)
+            return
+        chunks, size = [], 0
+        while True:
+            msg = await receive()
+            if msg["type"] == "http.disconnect":
+                return
+            body = msg.get("body", b"")
+            size += len(body)
+            if size > PITCH_BODY:
+                await too_big(scope, receive, send)
+                return
+            chunks.append(body)
+            if not msg.get("more_body"):
+                break
+        data, sent = b"".join(chunks), False
+
+        async def replay():
+            nonlocal sent
+            if not sent:
+                sent = True
+                return {"type": "http.request", "body": data, "more_body": False}
+            return await receive()
+        await self.inner(scope, replay, send)
+
+
+app.add_middleware(_PitchBodyCap)
+
+
+def _cap(name: str):
+    now = time.time()
+    xs = [t for t in _pitch_hour.get(name, []) if now - t < 3600]
+    if len(xs) >= PITCH_INSTANCE_HOUR[name]:
+        raise HTTPException(429, "Room is pitching for a crowd. Try again in a few minutes.")
+    _pitch_hour[name] = xs + [now]
+
+
+def _pitch(body: PitchParams) -> dict:
+    """The pitch parameters alone (never the round's notes), normalised the same way for every endpoint."""
+    check_age(body.age)
+    p = body.model_dump(include=set(PitchParams.model_fields))
+    p["cities"] = [c.strip() for c in p["cities"] if c.strip()][:4]
+    p["avoid"] = [a.strip() for a in p["avoid"] if a.strip()]
+    p["age"] = pitch.norm_age(p["age"], p["alcohol"])
+    if not p["cities"]:
+        raise HTTPException(400, "Name at least one city.")
+    return p
+
+
+def _pins(body) -> list[dict]:
+    return [x.model_dump() for x in getattr(body, "pins", [])]
+
+
+async def _subjects(p: dict):
+    subs = await pitch.subjects_of(p)
+    if not subs:
+        raise HTTPException(404, "Every name in this brief is new to Qloo.")
+    return subs, [s["entity"]["entity_id"] for s in subs], subs[0]["type"], [s["entity"]["name"] for s in subs]
+
+
+async def _spend(counter: str = "pitch_write", cap: int = WRITE_DAY):
+    if not await cache.spend(counter, cap):
+        raise HTTPException(429, "Room has pitched its share for today. The three samples still open with their first pitch.")
+
+
+async def _brief(text: str) -> dict:
+    return await pitch.brief_cached(text)
+
+
+async def _keep(sample: str, p: dict) -> bool:
+    """A result goes to the shared cache only when the request is a built-in sample, untouched (any age band)."""
+    if not sample or sample not in pitch.SAMPLES:
+        return False
+    return pitch.same_sample(p, await _brief(pitch.SAMPLES[sample]))
+
+
+def _core(ideas: list) -> list:
+    """An idea as the writer made it, for matching a posted idea with the sample's own."""
+    out = []
+    for i in ideas:
+        d = i if isinstance(i, dict) else i.model_dump()
+        out.append({"title": d.get("title"), "line": d.get("line"), "insight": d.get("insight"), "idea": d.get("idea"),
+                    "slots": {k: (v or {}).get("id") for k, v in (d.get("slots") or {}).items()},
+                    "lead_city": d.get("lead_city")})
+    return out
+
+
+async def _is_sample_ideas(sample: str, p: dict, ideas: list) -> bool:
+    """Posted ideas count as the sample's only when they are its first-round ideas, word for word."""
+    if not await _keep(sample, p):
+        return False
+    w = await cache.get(Cache.key("pitch_write", p, llm.MODEL, 3))
+    return bool(w) and _core(w["ideas"])[:len(ideas)] == _core(ideas)
+
+
+@app.post("/api/pitch/brief")
+async def pitch_brief(body: PitchBriefIn, request: Request):
+    """Gemini reads the line; Qloo resolves every name in it."""
+    limit(request, 10)
+    if not pitch.sample_of(body.text):
+        hit = await cache.get(Cache.key("pitch_brief", body.text.strip(), llm.MODEL, 3))
+        if not hit:
+            _cap("brief")
+            await _spend("pitch_read", READ_DAY)
+    return await _brief(body.text)
+
+
+@app.post("/api/pitch/lane")
+async def pitch_lane(body: PitchLaneIn, request: Request):
+    """One kind of culture these fans love, ranked by lift against the control's fans."""
+    limit(request, 60)
+    p = _pitch(body)
+    if body.lane not in dict(pitch.LANES):
+        raise HTTPException(400, "Unknown lane.")
+    _cap("qloo")
+    _, ids, lead, names = await _subjects(p)
+    return pitch.lane_public(await pitch.lane(ids, body.lane, lead, p["age"], names))
+
+
+@app.post("/api/pitch/threads")
+async def pitch_threads(body: PitchParams, request: Request):
+    limit(request, 12)
+    p = _pitch(body)
+    _cap("qloo")
+    subs, ids, lead, names = await _subjects(p)
+    ls = await pitch.lanes(ids, lead, p["age"], names)
+    marks = await pitch.marks(pitch.launching_brand(subs), [r for l in ls for r in l["rows"][:12]])
+    return {"threads": await pitch.threads(ls, p["age"]), "marks": marks}
+
+
+@app.post("/api/pitch/where")
+async def pitch_where(body: PitchParams, request: Request):
+    """Room's own map of the subject, city by city, with a role for each."""
+    limit(request, 12)
+    p = _pitch(body)
+    _cap("qloo")
+    subs, *_ = await _subjects(p)
+    return await pitch.where(subs, p["cities"], p["age"])
+
+
+@app.post("/api/pitch/venues")
+async def pitch_venues(body: PitchCityIn, request: Request):
+    limit(request, 30)
+    p = _pitch(body)
+    _cap("qloo")
+    _, ids, lead, _ = await _subjects(p)
+    try:
+        return await pitch.venues(ids, body.city.strip(), p["categories"], p["kind"], p["age"], lead)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/pitch/write")
+async def pitch_write(body: PitchWriteIn, request: Request):
+    """Up to three ideas from the evidence pack. Every slot is an id the server holds; every name renders from Qloo."""
+    limit(request, 6)
+    p = _pitch(body)
+    first = body.seed == 0 and not (body.kept or body.killed or body.answer or body.tone or body.pins)
+    key = Cache.key("pitch_write", p, llm.MODEL, 3)
+    if first and (hit := await cache.get(key)):
+        return hit
+    keep = first and await _keep(body.sample, p)
+    _cap("write")
+    if not keep:
+        await _spend()
+    try:
+        out = await pitch.write(p, body.kept, body.killed, body.answer, _pins(body), body.tone)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    if first and out["ideas"]:
+        await cache.set(key, out, keep=keep)
+    return out
+
+
+@app.post("/api/pitch/readback")
+async def pitch_readback(body: PitchIdeasIn, request: Request):
+    """Room's script reader reads the ideas back against the pack."""
+    limit(request, 8)
+    p = _pitch(body)
+    ideas = [i.model_dump() for i in body.ideas]
+    key = Cache.key("pitch_readback", p, _core(ideas), _pins(body), llm.MODEL, 3)
+    if hit := await cache.get(key):
+        return hit
+    sample = await _is_sample_ideas(body.sample, p, ideas) and not body.pins
+    _cap("readback")
+    if not sample:
+        await _spend()
+    out = await pitch.readback(p, ideas, _pins(body))
+    if out["ideas"] and not out["tally"]["stalled"]:
+        await cache.set(key, out, keep=sample)
+    return out
+
+
+@app.post("/api/pitch/strip")
+async def pitch_strip(body: PitchItemIn, request: Request):
+    limit(request, 30)
+    p = _pitch(body)
+    _cap("qloo")
+    try:
+        return await pitch.strip(p, body.id, _pins(body))
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/pitch/whatif")
+async def pitch_whatif(body: PitchWhatIfIn, request: Request):
+    limit(request, 12)
+    p = _pitch(body)
+    await _subjects(p)
+    _cap("whatif")
+    await _spend("pitch_read", READ_DAY)
+    try:
+        return await pitch.whatif(p, body.text)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.post("/api/pitch/rollout")
+async def pitch_rollout(body: PitchIdeaIn, request: Request):
+    limit(request, 6)
+    p = _pitch(body)
+    idea = body.idea.model_dump()
+    key = Cache.key("pitch_rollout", p, _core([idea]), _pins(body), llm.MODEL, 3)
+    if hit := await cache.get(key):
+        return hit
+    sample = await _is_sample_ideas(body.sample, p, [idea]) if not body.pins else False
+    _cap("rollout")
+    if not sample:
+        await _spend()
+    out = await pitch.rollout(p, idea, _pins(body))
+    if out["beats"] and not out["stalled"]:
+        await cache.set(key, out, keep=sample)
+    return out
+
+
 @app.get("/api/search")
-async def search(q: str, type: str | None = None):
-    return {"results": await engine.search(q, type)}
+async def search(q: str, request: Request, type: str | None = None):
+    limit(request, 30)
+    return {"results": await engine.search(q[:120], type)}
 
 
 @app.get("/api/city")

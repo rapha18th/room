@@ -2,7 +2,7 @@
 
 **Read the room before you walk in.**
 
-Room reads a script, a stand-up set, a speech, an ad, a deck or a document. It finds every cultural reference and tells you, city by city and age by age, whether each one lands with the people in the seats. Then it works like a spellchecker for culture: for every reference that falls flat, it suggests a local swap that does the same job in the line, or a cut, and you accept or ignore each one. Take the set on tour and Room writes a version for every stop.
+Say what you are launching and Room pitches it: it reads who loves it across music, shows, film, podcasts, brands, people, games, books and travel, maps where those fans are and the rooms they gather in, city by city, and pitches up to three ideas built only from those names. Then it checks the work. Room reads a script, an ad, a picture, a deck or a set, finds every cultural reference and tells you, city by city and age by age, whether each one lands with the people in the seats. For every reference that falls flat it suggests a local swap that does the same job, and you accept or ignore each one, like a spellchecker for culture.
 
 Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Loved comes from Qloo's taste graph. The two benchmarks below show where each one stands.
 
@@ -10,13 +10,26 @@ Room runs on [Qloo's](https://www.qloo.com) taste graph. Gemini knows fame. Love
 
 **Live at [sozoroom.web.app](https://sozoroom.web.app).** Open to everyone, on any screen. Ninety seconds:
 
-1. Press **Read the room**. Room reads the launch-ad sample for Atlanta, Lagos and London and scores every reference in each city.
-2. Press **Review for Atlanta**. In about half a minute Room suggests Chick-fil-A for Nando's. Accept it and the Atlanta score climbs from 80% to 92%.
-3. Switch to **Tour** and press **Route the tour**. Every stop gets its own version of the set, and its own set list.
-4. Load the **Stand-up** sample and review it for Dallas. Room keeps every weak reference there, because each one carries the joke.
+1. Room opens on **Pitch**. Press **Debut album**, or write one line: "A debut album for fans of SZA and Daniel Caesar. London, Atlanta, Lagos." Room reads the fans, maps the cities, finds their rooms and pitches up to three ideas. Every underlined name opens its Qloo receipt.
+2. Type "start it in record stores" in the What if line. Qloo names the record stores these fans favour in each city (Reckless Records, Phonica and Next Door Records in London) and the ideas move there. Keep one, kill one with a reason, press **Again**, then **Roll it out** for a Tease, Drop and Live plan per city.
+3. Switch to **Room** and press **Read the room**. Room reads the launch-ad sample for Atlanta, Lagos and London and scores every reference in each city. Press **Review for Atlanta**. In about half a minute Room suggests Chick-fil-A for Nando's. Accept it and the Atlanta score climbs from 80% to 92%.
+4. Switch to **Picture** and open the **Lagos bar** sample. Tennis on the TV reads as Stella Artois ground for Heineken; Room redraws the screen with the Champions League and reads the new frame back.
 5. Drop a Word file, a deck or a PDF on the page, review it, and press **Download** for the file with tracked changes.
 
 Gemini chooses among Qloo's candidates, so a swap or a score can shift a point or two between runs.
+
+## Pitch: from a brief to ideas you can defend
+
+One line goes in, the way a brief gets said across a table: the thing, the news, and the cities. "Liquid Death launches a sparkling tea. Austin, London, Atlanta." A launch with no record of its own speaks through its comps, the way labels and studios already describe audiences: "A horror film for fans of Midsommar and The Lighthouse." Gemini reads the line into chips, and Qloo resolves every name. Each step below runs as its own request, and the trace shows each one with its seconds.
+
+1. **Their people.** One `GET /v2/insights` per kind of culture (artist, TV, film, podcast, brand, person, game, book, destination) with the subject as the signal, a popularity floor and the subject excluded. The same list then goes back with a household name of the subject's kind as the signal (Coca-Cola for a brand, Beyoncé for an artist, Titanic for a film). Lift is the subject's fans' affinity minus the control's fans' affinity on the same names, so Room ranks what is distinctive to these fans. Liquid Death's fans: City Morgue +0.224, Trailer Park Boys +0.128, KILL TONY +0.170, The Lighthouse +0.122, Voodoo Ranger +0.278. A row folds when the control's fans barely know its names or the subject's fans barely separate from the field (Liquid Death's "They follow" row is a crowd of influencer accounts; it folds).
+2. **Threads.** The tags on each row's top ten, kept when they cross two or more rows and appear more often than on the control's own lists. Liquid Death's fans run on comedy, raw, youthful and atmospheric. Identity words and content descriptors stay out.
+3. **Where they gather.** Room's own map of the subject (or its comps) over the room's cities. Known, Gemini's estimate with a Qloo floor, says where a launch starts small or waits; Loved, from Qloo's heatmap and relative across the room's one map, says which known city opens and which builds. For the album sample, Atlanta and London open and Lagos builds. Then one `GET /v2/insights` per kind of room per city, with `filter.type=urn:entity:place`, the city's own box as `filter.location` and the room as a category tag: record stores for an album, cinemas for a film, bars for a drink. Qloo's order stands, and a chain that turns up twice in one box drops.
+4. **The ideas.** Gemini writes up to three from the evidence pack with ids in five slots: With, Where, On, Sound and Look. Its words carry placeholders and Room renders every name from its own Qloo record, so every artist, brand, show, film, book, game, podcast and room on the page is a Qloo record with a receipt. Room strikes any sentence with a name outside the pack, a number, a ranking or a claimed deal, and its script reader reads the finished ideas back; an idea the reader has yet to clear says so. Ink is Qloo; pencil is Gemini.
+5. **Talk back.** The What if line takes a name ("with Frank Ocean": Qloo measures his lift against these fans), a kind of room ("in record stores"), a city, an age band, a kind of culture ("more podcasts") or a mood ("darker", matched to Qloo's own tags). Qloo answers first, in one line, and the next round builds on it. Keep and Kill with a reason steer the round after.
+6. **Roll it out.** A Tease, Drop and Live beat per city, each in a room from that city's list, in the order the map sets.
+
+A pitch idea goes to the paper with **Check the copy**, where Room reads every reference in it city by city, and **Take it on tour** sends the rollout's cities to Tour. Qloo returns the same lifts for the same request. Gemini reads the brief, picks which of Qloo's names fill each slot and writes the words, so those shift between runs; the samples hold still because their first pitch is cached.
 
 ## What it does
 
@@ -124,6 +137,8 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 | `find_swap(line, reference, kind, city, job_in_line?)` | Local equivalents that keep the reference's job, each scored |
 | `suggest_for_city(text, city, age?)` | Review a text for one city: swaps, cuts and keeps, returned as suggestions for you to apply |
 | `rewrite_for_city(text, city, also_check?, max_swaps?)` | The rewrite agent, run on the server, with its trace |
+| `pitch(brief, cities?, age?)` | A launch brief in, up to three ideas out, read back; every cultural name in an idea is a Qloo record with its lift, every room a Qloo place |
+| `read_audience(subject, kind?, age?)` | What fans of one thing love more than fans of a household name of the same kind do, across nine kinds of culture, with the threads |
 | `check_scene(brand, cities, image_base64? or image_url?, age?)` | The picture check: every element in an ad frame, scored for the brand in each city, with the best local alternative |
 
 ## Qloo endpoints
@@ -133,6 +148,8 @@ claude mcp add --transport http room https://sozoroom.web.app/mcp
 | `GET /search` | Reference to entity; city name to locality and boundary |
 | `GET /v2/insights` `filter.type=urn:heatmap` | Known and loved per city over the room polygon, with `signal.demographics.age` |
 | `GET /v2/insights` `filter.type=urn:entity:*` | Swap candidates by `signal.interests.entities` and by `filter.tags`, scoped with `signal.location` set to the city's own polygon |
+| `GET /v2/insights` `filter.type=urn:entity:*` with `filter.popularity.min` | Pitch's nine rows: what the subject's fans love, then the same names for the control's fans, for lift |
+| `GET /v2/insights` `filter.type=urn:entity:place` | Pitch's rooms: `filter.location` set to the city's box, `filter.tags` set to a place category |
 | `GET /search` `types=urn:entity:brand` | A brand's partnership, competitor and similar-brand tags, for ownership in the picture check |
 | `GET /v2/insights` `filter.results.entities` | The brand's audience affinity for each sports property, against Coca-Cola's audience: lift |
 
@@ -158,6 +175,7 @@ Nando's, in the launch ad, for a room of Atlanta, Lagos and London. Every call i
 
 - Room sends Qloo entity names, tags and city boundaries. Your words stay with Room.
 - Gemini on Vertex AI reads the text to find references and rewrite lines. Pasted text stays in the server's working memory and clears when the instance recycles. Uploaded files are parsed and rebuilt in memory and come straight back to you.
+- A typed brief and the ideas Room writes for it stay in the server's working memory. Pictures you upload are read in memory too; the samples' results sit in the shared cache.
 - The shared cache in Firestore holds Qloo lookups and the built-in samples.
 - The Qloo key lives in Secret Manager and reaches the server as an environment variable. The browser talks only to Room.
 

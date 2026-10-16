@@ -5,6 +5,7 @@ import { accepts, blockStarts, downloadText, exportFile, joinBlocks, KINDS, pars
 import { ticks, transition } from "./js/motion.js";
 import { initPalette, openPalette } from "./js/palette.js";
 import { acceptsPicture, createPicture, PICTURE_SAMPLES } from "./js/picture.js";
+import { createPitch, PITCH_SAMPLES } from "./js/pitch.js";
 
 const API = "/api";
 const MAX_CITIES = 4;
@@ -72,8 +73,9 @@ const state = {
   slug: store.get("slug", SAMPLES[0].slug),
   cities: store.get("cities", SAMPLES[0].cities),
   picCities: store.get("picCities", PICTURE_SAMPLES[0].cities),   // the picture check keeps its own room
+  pitchCities: store.get("pitchCities", ["Austin", "London", "Atlanta"]),   // and so does a pitch
   age: store.get("age", ""),
-  tab: store.get("tab", "room"),           // "room", "tour" or "picture"
+  tab: store.get("tab", "pitch"),          // "pitch", "room", "tour" or "picture"
   mode: "compose",                          // "compose" or "read"
   refs: [],
   scores: {},          // ref id -> { key, data } for the room's cities
@@ -104,7 +106,18 @@ const pic = createPicture({
   setFocus: (c) => { state.focus = c; renderControls(); render(); },
   setCities: (c) => setPicCities(c), render: () => render(), renderControls: () => renderControls(),
 });
-const activeCities = () => (state.tab === "picture" ? state.picCities : state.cities);
+// A pitch keeps its own cities too. The brief can name them; the bar edits them.
+const pitch = createPitch({
+  $, esc, api: (path, body) => api(path, body),
+  // A pitch keeps its own status line: shown on its own tab, kept for when the person comes back.
+  status: (m) => { if (state.tab === "pitch") status(m); },
+  cities: () => state.pitchCities, age: () => state.age,
+  setCities: (c, opts) => setPitchCities(c, opts), setAge: (a, opts) => setPitchAge(a, opts),
+  render: () => render(), saveBrief: (t) => store.set("brief", t),
+  print: (html) => { $("print").innerHTML = html; window.print(); },
+  useText: (text, slug, opts) => useText(text, slug, opts),
+});
+const activeCities = () => (state.tab === "picture" ? state.picCities : state.tab === "pitch" ? state.pitchCities : state.cities);
 
 const roomKey = () => state.cities.join("|") + "#" + state.age;
 const tourKey = () => state.tour.stops.join("|") + "#" + state.age;
@@ -211,13 +224,16 @@ function renderControlsNow() {
   $("roomGroup").hidden = state.tab === "tour";
   $("pictureGroup").hidden = state.tab !== "picture";
   if (document.activeElement !== $("brandInput")) $("brandInput").value = pic.state.brand;
-  $("samples").innerHTML = (state.tab === "picture" ? PICTURE_SAMPLES : SAMPLES)
-    .map((s, i) => `<button type="button" data-sample="${i}">${s.name}</button>`).join("");
+  $("samples").innerHTML = (state.tab === "picture" ? PICTURE_SAMPLES : state.tab === "pitch" ? PITCH_SAMPLES : SAMPLES)
+    .map((s, i) => `<button type="button" data-sample="${i}"${state.tab === "pitch" ? ` aria-pressed="${pitch.activeSample() === i}"` : ""}>${s.name}</button>`).join("");
+  $("footNote").innerHTML = state.tab === "pitch"
+    ? "<b>Lift</b> is how much more these fans love a thing than fans of a household name of the same kind do. Every underlined name is a Qloo record with its receipt; the words around it are Gemini's."
+    : "<b>Known</b> is Gemini's read of who recognises a reference, raised wherever Qloo measures a local fan base. <b>Loved</b>, every swap and every tour stop come from Qloo's taste graph.";
   document.querySelector(".stage").classList.toggle("touring", state.tab === "tour");
   $("tourGroup").hidden = state.tab !== "tour";
   $("chips").innerHTML = activeCities().map((c) => `
     <span class="chip ${c === state.focus ? "focus" : ""}">
-      <button class="name" data-focus="${esc(c)}" type="button" aria-pressed="${c === state.focus}" title="Underline the script for ${esc(c)}">${esc(c)}</button>
+      <button class="name" data-focus="${esc(c)}" type="button" aria-pressed="${c === state.focus}" title="${state.tab === "pitch" ? `${esc(c)} is in the room` : `Underline the script for ${esc(c)}`}">${esc(c)}</button>
       <button class="x" data-remove="${esc(c)}" type="button" aria-label="Remove ${esc(c)}">×</button>
     </span>`).join("");
   const full = activeCities().length >= MAX_CITIES;
@@ -231,7 +247,7 @@ function renderControlsNow() {
   $("stopInput").disabled = tourFull;
   $("stopInput").placeholder = tourFull ? "Tour full" : "Add a stop";
   $("ages").innerHTML = AGES.map(([v, l]) =>
-    `<button type="button" aria-pressed="${v === state.age}" data-age="${v}">${l}</button>`).join("");
+    `<button type="button" aria-pressed="${v === state.age}" data-age="${v}"${state.tab === "pitch" && pitch.state.brief?.alcohol && v === "24_and_younger" ? ` disabled title="An alcohol brief reads fans 25 and over"` : ""}>${l}</button>`).join("");
 }
 
 function setTab(tab) {
@@ -242,8 +258,17 @@ function setTab(tab) {
   if (!activeCities().includes(state.focus)) state.focus = activeCities()[0];
   closePop();
   transition(() => { renderControls(); render(); });
-  // The age band may have moved on the picture tab: bring the room's scores up to date.
+  // The age band may have moved on another tab: bring the room's scores up to date.
   if (tab === "room" && state.mode === "read") scoreAll();
+  if (tab === "pitch") pitch.entered();
+}
+
+function setPitchCities(cities, { quiet = false } = {}) {
+  state.pitchCities = cities;
+  if (state.tab === "pitch" && !cities.includes(state.focus)) state.focus = cities[0];
+  store.set("pitchCities", cities);
+  renderControls();
+  if (!quiet) pitch.roomChanged();
 }
 
 function setPicCities(cities) {
@@ -254,10 +279,21 @@ function setPicCities(cities) {
   pic.refit();
 }
 
-function setAge(age) {
+// A single band from a brief or a what-if lands on the bar's preset that holds it ("30_to_34" lights 25 to 34).
+// Setting the age from a pitch leaves the Room tab's review and scores alone; they catch up on entry.
+function setPitchAge(age, { quiet = false } = {}) {
+  const v = AGES.find(([k]) => k && k.split(",").includes(age))?.[0] ?? age;
+  state.age = v;
+  store.set("age", v);
+  renderControls();
+  if (!quiet && state.tab === "pitch") pitch.roomChanged({ age: true });
+}
+
+function setAge(age, { quiet = false } = {}) {
   state.age = age;
   store.set("age", age);
   renderControls();
+  if (state.tab === "pitch") { if (!quiet) pitch.roomChanged({ age: true }); return; }
   if (state.tab === "picture") { pic.refit(); return; }
   state.review = null;
   if (state.mode === "read") { scoreAll(); render(); }
@@ -265,6 +301,7 @@ function setAge(age) {
 
 function setCities(cities) {
   if (state.tab === "picture") { setPicCities(cities); return; }
+  if (state.tab === "pitch") { setPitchCities(cities); return; }
   state.cities = cities;
   state.review = null;
   if (!cities.includes(state.focus)) state.focus = cities[0];
@@ -296,7 +333,7 @@ $("chips").addEventListener("click", (e) => {
   const r = e.target.closest("[data-remove]");
   if (r) { if (activeCities().length > 1) setCities(activeCities().filter((c) => c !== r.dataset.remove)); return; }
   const f = e.target.closest("[data-focus]");
-  if (f) { state.focus = f.dataset.focus; renderControls(); render(); if (state.tab !== "picture") summarise(); }
+  if (f) { state.focus = f.dataset.focus; renderControls(); render(); if (state.tab === "room") summarise(); }
 });
 
 $("route").addEventListener("click", (e) => {
@@ -445,7 +482,25 @@ function moveSpot() {
 
 function renderNow() {
   const picture = state.tab === "picture";
+  const pitching = state.tab === "pitch";
   $("frame").hidden = !picture;
+  $("pitch").hidden = !pitching;
+  if (pitching) {
+    const p = pitch.state;
+    $("script").hidden = true;
+    $("read").hidden = true;
+    $("editBtn").hidden = true;
+    $("undoBtn").hidden = true;
+    $("downloadBtn").hidden = !p.ideas.length;
+    $("downloadBtn").textContent = "Print the pitch";
+    $("readBtn").textContent = pitch.primaryLabel();
+    $("readBtn").disabled = !!p.busy && p.busy !== "strips";
+    $("slug").textContent = p.slug || "INT. A BRIEF LANDS";
+    keepFocus(() => pitch.renderPaper());
+    keepFocus(() => { $("panel").innerHTML = pitch.panelHtml(); ticks($("panel")); });
+    moveSpot();
+    return;
+  }
   if (picture) {
     const p = pic.state;
     $("script").hidden = true;
@@ -1132,6 +1187,15 @@ async function openFile(file) {
     return;
   }
   if (!accepts(file)) { status("Room reads PDF, PowerPoint (.pptx), Word (.docx), text and Markdown files, pictures (JPEG, PNG, WebP) and short clips (MP4, MOV, WebM)."); return; }
+  if (state.tab === "pitch") {
+    // A brief document becomes the brief line: its opening paragraphs are the brief.
+    status(`Opening ${file.name}…`);
+    try {
+      const doc = await parseFile(file);
+      await pitch.go(joinBlocks(doc.blocks).slice(0, 2000));
+    } catch (err) { status(err.message); }
+    return;
+  }
   if (state.tab === "picture") { state.tab = "room"; store.set("tab", "room"); renderControls(); }
   status(`Opening ${file.name}…`);
   try {
@@ -1166,7 +1230,7 @@ async function download() {
 
 $("openBtn").addEventListener("click", () => $("fileInput").click());
 $("fileInput").addEventListener("change", () => { const f = $("fileInput").files[0]; $("fileInput").value = ""; if (f) openFile(f); });
-$("downloadBtn").addEventListener("click", () => (state.tab === "picture" ? pic.download() : download()));
+$("downloadBtn").addEventListener("click", () => (state.tab === "picture" ? pic.download() : state.tab === "pitch" ? pitch.print() : download()));
 
 let dragDepth = 0;
 const isFileDrag = (e) => [...(e.dataTransfer?.types || [])].includes("Files");
@@ -1186,6 +1250,7 @@ addEventListener("drop", (e) => {
 
 $("panel").addEventListener("click", (e) => {
   if (state.tab === "picture") { pic.onPanel(e); return; }
+  if (state.tab === "pitch") { pitch.onPanel(e); return; }
   const b = e.target.closest("[data-act], [data-focus], [data-ref]");
   if (!b) return;
   if (b.dataset.focus) { state.focus = b.dataset.focus; renderControls(); render(); summarise(); return; }
@@ -1249,6 +1314,17 @@ function onPaper(target) {
 }
 $("read").addEventListener("click", (e) => onPaper(e.target));
 $("frame").addEventListener("click", (e) => pic.onFrame(e));
+$("pitch").addEventListener("click", (e) => pitch.onPaper(e));
+$("pitch").addEventListener("submit", (e) => pitch.onPaper(e));
+$("pitch").addEventListener("keydown", (e) => {
+  // One line is the natural brief: Return pitches it, Shift+Return adds a line. An input method composing a word
+  // keeps its Return.
+  if (e.target.id === "briefInput" && e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+    e.preventDefault();
+    pitch.primary();
+  }
+});
+$("pitch").addEventListener("input", (e) => { pitch.onInput(e); if (e.target.id === "briefInput") $("readBtn").textContent = pitch.primaryLabel(); });
 $("frame").addEventListener("input", (e) => pic.onWipe(e));
 $("read").addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && onPaper(e.target)) e.preventDefault();
@@ -1257,6 +1333,7 @@ $("read").addEventListener("keydown", (e) => {
 // ---------- compose ----------
 
 $("readBtn").addEventListener("click", () => {
+  if (state.tab === "pitch") { pitch.primary(); return; }
   if (state.tab !== "picture") { readRoom(); return; }
   const b = $("brandInput").value.trim();
   if (b) pic.state.brand = b;
@@ -1275,9 +1352,28 @@ $("editBtn").addEventListener("click", () => {
 $("script").addEventListener("input", () => { store.set("text", $("script").value); });
 $("script").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); readRoom(); } });
 
+// An idea from Pitch goes to the paper, where Room checks every reference in its copy city by city.
+function useText(text, slug, { cities, stops, tour } = {}) {
+  if (!text.trim()) { status("That idea has no copy to check yet."); return; }
+  setTab(tour ? "tour" : "room");
+  state.doc = null;
+  state.slug = slug || "INT. A PITCH";
+  store.set("slug", state.slug);
+  $("script").value = text;
+  state.mode = "compose";
+  if (stops?.length) { state.tour.stops = stops.slice(0, MAX_STOPS); store.set("stops", state.tour.stops); }
+  if (cities?.length) {
+    state.cities = cities.slice(0, MAX_CITIES);
+    store.set("cities", state.cities);
+    if (!state.cities.includes(state.focus)) state.focus = state.cities[0];
+  }
+  renderControls();
+  readRoom();
+}
+
 function loadSample(i) {
   const s = SAMPLES[i];
-  if (state.tab === "picture") setTab("room");
+  if (state.tab === "picture" || state.tab === "pitch") setTab("room");
   state.doc = null;
   state.slug = s.slug;
   store.set("slug", s.slug);
@@ -1293,6 +1389,7 @@ $("samples").addEventListener("click", (e) => {
   const b = e.target.closest("[data-sample]");
   if (!b) return;
   if (state.tab === "picture") pic.loadSample(+b.dataset.sample);
+  else if (state.tab === "pitch") { const s = PITCH_SAMPLES[+b.dataset.sample]; pitch.go(s.text, { slug: s.slug }); }
   else loadSample(+b.dataset.sample);
 });
 
@@ -1301,7 +1398,7 @@ $("samples").addEventListener("click", (e) => {
 function commands() {
   const reading = state.mode === "read" && state.refs.length;
   const list = [
-    { label: "Read the room", hint: `${MOD}+Enter`, run: () => { setTab(state.tab === "picture" ? "room" : state.tab); readRoom(); } },
+    { label: "Read the room", hint: `${MOD}+Enter`, run: () => { setTab(state.tab === "tour" ? "tour" : "room"); readRoom(); } },
     { label: "Open a file", hint: "PDF, PPTX, DOCX", run: () => $("fileInput").click() },
   ];
   if (reading) {
@@ -1312,7 +1409,12 @@ function commands() {
   }
   if (state.review?.items.some((it) => it.status === "pending")) list.push({ label: "Accept every suggestion", run: acceptAll });
   if (history.length) list.push({ label: "Undo the last edit", hint: `${MOD}+Z`, run: undo });
-  ["room", "tour", "picture"].filter((t) => t !== state.tab).forEach((t) =>
+  if (state.tab === "pitch" && pitch.state.brief) {
+    list.unshift({ label: "Again: new ideas for this brief", run: () => pitch.again() });
+    if (pitch.state.ideas.length) list.push({ label: "Print the pitch", run: () => pitch.print() });
+  }
+  PITCH_SAMPLES.forEach((s) => list.push({ label: `Pitch: ${s.name}`, run: () => { setTab("pitch"); pitch.go(s.text, { slug: s.slug }); } }));
+  ["pitch", "room", "tour", "picture"].filter((t) => t !== state.tab).forEach((t) =>
     list.push({ label: `Switch to ${t[0].toUpperCase() + t.slice(1)}`, run: () => setTab(t) }));
   PICTURE_SAMPLES.forEach((s, i) => list.push({ label: `Picture: ${s.name}`, run: () => { setTab("picture"); pic.loadSample(i); } }));
   SAMPLES.forEach((s, i) => list.push({ label: `Sample: ${s.name}`, run: () => loadSample(i) }));
@@ -1330,6 +1432,7 @@ addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if ($("pop").matches?.(":popover-open")) { closePop(true); return; }
     if (state.tab === "picture" && pic.state.selected) { pic.back(); return; }
+    if (state.tab === "pitch" && pitch.state.receipt) { pitch.back(); return; }
     if (state.selected) { const was = state.selected; state.selected = null; transition(render); focusSoon(`.rowname[data-ref="${CSS.escape(was)}"]`); return; }
     if (state.tour.active) { state.tour.active = null; transition(() => { renderControls(); render(); }); return; }
     if (state.review) {
@@ -1341,7 +1444,7 @@ addEventListener("keydown", (e) => {
   }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === "?") { $("how").showModal(); return; }
-  if (!state.review || state.tab === "picture") return;
+  if (!state.review || state.tab === "picture" || state.tab === "pitch") return;
   // Letter keys act only while a review surface has focus: the panel, the paper or the suggestion card.
   const on = document.activeElement?.closest?.("#panel, #read, #pop");
   if (!on) return;
@@ -1370,5 +1473,7 @@ addEventListener("resize", moveSpot);
 
 initPalette();
 $("script").value = state.text;
+pitch.state.text = store.get("brief", PITCH_SAMPLES[0].text);
+if (!activeCities().includes(state.focus)) state.focus = activeCities()[0];
 renderControls();
 render();

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Room</title>
-  <meta name="description" content="Read the room before you walk in. Room checks every cultural reference in a set, a script, a speech, an ad or a deck against the audience you are about to face, and fixes what falls flat.">
+  <meta name="description" content="Read the room before you walk in. Room pitches ideas built from what an audience loves, checks every cultural reference in a script, an ad or a deck against the cities you are about to face, and fixes what falls flat.">
   <meta name="theme-color" content="#0c0b0a">
   <meta name="view-transition" content="same-origin">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -24,14 +24,15 @@
     <div class="topactions">
       <button class="ghost" id="openBtn" type="button">Open a file</button>
       <button class="ghost kbd" id="paletteBtn" type="button"><span class="mod">⌘</span>K <span class="sr">commands</span></button>
-      <button class="ghost" id="howBtn" type="button">How it reads</button>
+      <button class="ghost" id="howBtn" type="button">How it works</button>
       <input id="fileInput" type="file" accept=".pdf,.pptx,.docx,.txt,.md,.markdown,.jpg,.jpeg,.png,.webp,.mp4,.mov,.webm" hidden>
     </div>
   </header>
 
   <section class="controls" aria-label="The audience">
     <div class="seg modes" id="modes" role="group" aria-label="Mode">
-      <button type="button" data-mode="room" aria-pressed="true">Room</button>
+      <button type="button" data-mode="pitch" aria-pressed="true">Pitch</button>
+      <button type="button" data-mode="room" aria-pressed="false">Room</button>
       <button type="button" data-mode="tour" aria-pressed="false">Tour</button>
       <button type="button" data-mode="picture" aria-pressed="false">Picture</button>
     </div>
@@ -67,6 +68,7 @@
       <textarea id="script" spellcheck="false" aria-label="Your script" placeholder="Paste a set, a script, a speech or an ad. Or drop a PDF, deck or document anywhere on the page."></textarea>
       <div id="read" class="read" hidden></div>
       <div id="frame" class="frame" hidden></div>
+      <div id="pitch" class="pitch" hidden></div>
       <div class="paper-foot">
         <span class="status" id="status" aria-live="polite"></span>
         <div class="actions">
@@ -82,7 +84,7 @@
   </main>
 
   <footer class="foot">
-    <span><b>Known</b> is Gemini's read of who recognises a reference, raised wherever Qloo measures a local fan base. <b>Loved</b>, every swap and every tour stop come from Qloo's taste graph.</span>
+    <span id="footNote"><b>Known</b> is Gemini's read of who recognises a reference, raised wherever Qloo measures a local fan base. <b>Loved</b>, every swap and every tour stop come from Qloo's taste graph.</span>
     <a href="https://github.com/rapha18th/room" target="_blank" rel="noopener">Source</a>
   </footer>
 
@@ -97,14 +99,15 @@
   </dialog>
 
   <dialog id="how" aria-labelledby="howTitle">
-    <h2 id="howTitle">How Room reads a script</h2>
+    <h2 id="howTitle">How Room works</h2>
     <ol>
+      <li><b>Pitch.</b> Say what you are launching. Qloo reads who loves it across nine kinds of culture, ranked by lift: how much more these fans love each thing than the fans of a household name of the same kind. It maps where the fans are and the rooms they gather in, city by city. Gemini pitches three ideas built only from those names, and Room reads them back.</li>
       <li><b>Read.</b> Gemini finds every reference and names the job it does in the line. Drop a PDF, a deck or a document and Room reads that too.</li>
       <li><b>Match.</b> Qloo search turns each one into an entity in its taste graph.</li>
       <li><b>Score.</b> Known is how much of a city recognises the reference: Gemini's estimate, raised wherever Qloo measures a real local fan base. Loved is Qloo's median affinity in that city, read for the age band you pick.</li>
       <li><b>Review.</b> For any city, an agent decides what to swap, what to drop and what to keep. Qloo finds local swaps and tests each one. You accept or ignore every suggestion, like a spellchecker for culture.</li>
       <li><b>Tour.</b> Give Room up to eight stops and it reviews the set for each one, then prints a set list per city.</li>
-      <li><b>Picture.</b> Drop a frame or a clip from an ad and name the brand. Gemini reads what is on the TV, in hand and on the wall. Qloo scores each element for the brand: how its fans lean against the average brand fan, who holds it in Qloo's brand records, and how each city feels about it. Room redraws a flagged element in place and reads the new frame back.</li>
+      <li><b>Picture.</b> Drop a frame or a clip from an ad and name the brand. Gemini reads what is on the TV, in hand and on the wall. Qloo scores each element for the brand: how its fans lean against Coca-Cola's fans, who holds it in Qloo's brand records, and how each city feels about it. Room redraws a flagged element in place and reads the new frame back.</li>
     </ol>
     <dl class="legend" id="legend"></dl>
     <p class="keys"><kbd class="mod">⌘</kbd><kbd>K</kbd> commands · <kbd class="mod">⌘</kbd><kbd>↵</kbd> read · <kbd class="mod">⌘</kbd><kbd>Z</kbd> undo · in a review: <kbd>A</kbd> accept, <kbd>I</kbd> ignore, <kbd>J</kbd> <kbd>K</kbd> next and previous · <kbd>Esc</kbd> back. Letter keys work only while a suggestion, the paper or the panel has focus.</p>
