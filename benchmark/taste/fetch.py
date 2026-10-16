@@ -11,6 +11,7 @@ Usage:
 import collections
 import datetime as dt
 import hashlib
+import http.client
 import json
 import re
 import sys
@@ -56,11 +57,19 @@ class Pages:
             m = json.loads(meta.read_text()) if meta.exists() else {"fetched_at": None, "status": 200}
             return path.read_bytes(), m
         req = urllib.request.Request(url, headers={"User-Agent": UA})
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                body, status = r.read(), r.status
-        except urllib.error.HTTPError as e:
-            body, status = b"", e.code
+        for attempt in range(4):   # 2.5: a transport failure is retried with identical inputs
+            try:
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    body, status = r.read(), r.status
+                break
+            except urllib.error.HTTPError as e:
+                body, status = b"", e.code
+                break
+            except (http.client.IncompleteRead, urllib.error.URLError, TimeoutError, ConnectionError) as e:
+                if attempt == 3:
+                    raise
+                print(f"  transport retry {attempt + 1} for {name}: {repr(e)[:80]}", flush=True)
+                time.sleep(5 * (attempt + 1))
         m = {"url": url, "fetched_at": now(), "status": status, "sha256": hashlib.sha256(body).hexdigest()}
         self.dir.mkdir(parents=True, exist_ok=True)
         path.write_bytes(body)
